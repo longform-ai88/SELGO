@@ -1380,13 +1380,13 @@ async function login(mode){
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
-    if (!ph || !pw) { showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
+    if (!ph || !pw) { if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
     form.append("phone", ph);
     form.append("password", pw);
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
-    if (!u || !pw) { showAuthMsg("Fyll inn brukernavn og passord", true); return; }
+    if (!u || !pw) { if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
     form.append("username", u);
     form.append("password", pw);
   }
@@ -1422,13 +1422,13 @@ async function register(mode){
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
-    if (!ph || !pw) { showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
+    if (!ph || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
     form.append("phone", ph);
     form.append("password", pw);
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
-    if (!u || !pw) { showAuthMsg("Fyll inn brukernavn og passord", true); return; }
+    if (!u || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
     form.append("username", u);
     form.append("password", pw);
   }
