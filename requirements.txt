@@ -1,4 +1,7 @@
-# Stripe
-fastapi
-uvicorn
-stripe
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+sqlalchemy>=2.0,<3.0
+python-jose>=3.3,<4.0
+passlib>=1.7,<2.0
+python-multipart>=0.0.9,<1.0
+stripe>=11.0,<12.0
