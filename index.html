@@ -782,6 +782,7 @@ font-size: 30px;
 <div class="hint" id="formHint">Velg kategori over for automatisk utfylling av skjema.</div>
 <div class="pricing-preview" id="pricingPreview">Prisoversikt: -</div>
 <button onclick="addItem()" id="addBtn"></button>
+<button type="button" id="payBtn" class="vipps-secondary" style="display:none" onclick="handlePayment('stripe')">Gå til betaling</button>
 <div id="publishStatus" class="payment-status"></div>
 </div>
 
@@ -1007,6 +1008,43 @@ function calculatePricingPreview(categoryValue, priceValue, listingModeValue){
   return "299 kr for 60 dager";
 }
 
+function calculatePrice(price, category) {
+  const amount = Number(price || 0);
+  const categoryText = (category || "").toLowerCase();
+  const listingMode = (document.getElementById("listingMode")?.value || "").toLowerCase();
+
+  if (categoryText.startsWith("bil")) return 499;
+
+  if (categoryText.startsWith("bolig")) {
+    if (listingMode === "rent") return 799;
+    return 1499;
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (amount < 2000) return 0;
+  if (amount <= 9999) return 199;
+  if (amount <= 20000) return 299;
+  return 299;
+}
+
+function updatePaymentActionButtons() {
+  const addBtn = document.getElementById("addBtn");
+  const payBtn = document.getElementById("payBtn");
+  const priceEl = document.getElementById("price");
+  const categoryEl = document.getElementById("category");
+
+  if (!addBtn || !payBtn || !priceEl || !categoryEl) return;
+
+  const fee = calculatePrice(priceEl.value, categoryEl.value);
+  if (fee > 0) {
+    addBtn.style.display = "none";
+    payBtn.style.display = "";
+  } else {
+    addBtn.style.display = "";
+    payBtn.style.display = "none";
+  }
+}
+
 function renderPricingPreview(){
   const el = document.getElementById("pricingPreview");
   if (!el) return;
@@ -1016,6 +1054,7 @@ function renderPricingPreview(){
     document.getElementById("listingMode").value
   );
   el.innerText = `Prisoversikt: ${value}`;
+  updatePaymentActionButtons();
 }
 
 function renderFlowPricingPreview(){
@@ -1195,6 +1234,45 @@ function showPublishStatus(message, isError=false, includeConfirm=false){
   el.style.display = "block";
 }
 
+async function createListingWithProvider(providerOverride = null){
+  const token = localStorage.getItem("token");
+  if (!token) {
+    showPublishStatus("Logg inn for a publisere annonse.", true);
+    return { ok: false, data: { detail: "Mangler innlogging" } };
+  }
+
+  const selectedCategory = category.value;
+  const modeValue = document.getElementById("listingMode").value;
+  if ((selectedCategory || "").toLowerCase().startsWith("bolig") && !modeValue) {
+    showPublishStatus("Velg boligtype: salgsannonse eller leieannonse.", true);
+    return { ok: false, data: { detail: "Mangler boligtype" } };
+  }
+
+  const form = new FormData();
+  form.append("title", title.value);
+  form.append("description", desc.value);
+  form.append("price", price.value);
+  form.append("city", city.value);
+  form.append("category", selectedCategory);
+  form.append("listing_mode", modeValue);
+  form.append("boost", document.getElementById("boostToggle").checked ? "true" : "false");
+  form.append("payment_provider", providerOverride || document.getElementById("paymentProvider").value);
+
+  const imageInput = document.getElementById("image");
+  if (imageInput.files && imageInput.files.length > 0) {
+    form.append("image", imageInput.files[0]);
+  }
+
+  const res = await fetch(API + "/listings", {
+    method: "POST",
+    headers: {"Authorization":"Bearer " + token},
+    body: form
+  });
+
+  const data = await res.json().catch(()=>({}));
+  return { ok: res.ok, data };
+}
+
 function switchAuthTab(name, el) {
   document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
@@ -1312,42 +1390,9 @@ location.reload();
 })();
 
 async function addItem(){
-const token=localStorage.getItem("token");
-if (!token) {
-  showPublishStatus("Logg inn for a publisere annonse.", true);
-  return;
-}
-
-const selectedCategory = category.value;
-const modeValue = document.getElementById("listingMode").value;
-if ((selectedCategory || "").toLowerCase().startsWith("bolig") && !modeValue) {
-  showPublishStatus("Velg boligtype: salgsannonse eller leieannonse.", true);
-  return;
-}
-
-const form=new FormData();
-form.append("title",title.value);
-form.append("description",desc.value);
-form.append("price",price.value);
-form.append("city",city.value);
-form.append("category",selectedCategory);
-form.append("listing_mode", modeValue);
-form.append("boost", document.getElementById("boostToggle").checked ? "true" : "false");
-form.append("payment_provider", document.getElementById("paymentProvider").value);
-
-const imageInput = document.getElementById("image");
-if (imageInput.files && imageInput.files.length > 0) {
-	form.append("image", imageInput.files[0]);
-}
-
-const res = await fetch(API+"/listings",{
-method:"POST",
-headers:{"Authorization":"Bearer "+token},
-body:form
-});
-
-const data = await res.json().catch(()=>({}));
-if (!res.ok) {
+const result = await createListingWithProvider(null);
+const data = result.data || {};
+if (!result.ok) {
   showPublishStatus(data.detail || "Kunne ikke publisere annonsen.", true);
   return;
 }
@@ -1364,28 +1409,80 @@ if (data.payment_required) {
 fetchItems();
 }
 
-async function confirmLatestPayment(){
-  if (!latestPendingOrderId) {
-    showPublishStatus("Ingen ventende betaling funnet.", true);
+async function handlePayment(method) {
+  if (method !== "stripe") {
+    showPublishStatus("Valgt betalingsmetode er ikke tilgjengelig enda.", true);
     return;
   }
+
+  const fee = calculatePrice(document.getElementById("price").value, document.getElementById("category").value);
+  if (fee <= 0) {
+    await addItem();
+    return;
+  }
+
+  const created = await createListingWithProvider("stripe");
+  const data = created.data || {};
+  if (!created.ok) {
+    showPublishStatus(data.detail || "Kunne ikke opprette annonse for betaling.", true);
+    return;
+  }
+
+  if (!data.payment_required) {
+    showPublishStatus("Annonse publisert og aktiv.");
+    fetchItems();
+    return;
+  }
+
+  latestPendingOrderId = data.payment_order_id;
   const token = localStorage.getItem("token");
-  if (!token) {
-    showPublishStatus("Logg inn for a bekrefte betaling.", true);
+  const form = new FormData();
+  form.append("item_id", String(data.listing_id));
+  form.append("amount", String(data.fee_nok || fee));
+  form.append("title", document.getElementById("title").value || "Listing");
+  form.append("category", document.getElementById("category").value || "");
+  form.append("listing_mode", document.getElementById("listingMode").value || "");
+
+  const stripeRes = await fetch(API + "/create-checkout-session", {
+    method: "POST",
+    headers: {"Authorization": "Bearer " + token},
+    body: form
+  });
+
+  const stripeData = await stripeRes.json().catch(()=>({}));
+  if (!stripeRes.ok || !stripeData.checkout_url) {
+    showPublishStatus(stripeData.detail || "Kunne ikke starte Stripe betaling.", true);
     return;
   }
+
+  window.location.href = stripeData.checkout_url;
+}
+
+async function confirmPaymentOrderById(orderId, providerReference = "") {
+  const token = localStorage.getItem("token");
+  if (!token) return { ok: false, detail: "Logg inn for a bekrefte betaling." };
 
   const form = new FormData();
-  form.append("provider_reference", "manual_ui_confirmation");
+  if (providerReference) form.append("provider_reference", providerReference);
 
-  const res = await fetch(API + `/payments/orders/${latestPendingOrderId}/confirm`, {
+  const res = await fetch(API + `/payments/orders/${orderId}/confirm`, {
     method: "POST",
     headers: {"Authorization": "Bearer " + token},
     body: form
   });
 
   const data = await res.json().catch(()=>({}));
-  if (!res.ok) {
+  return { ok: res.ok, data };
+}
+
+async function confirmLatestPayment(){
+  if (!latestPendingOrderId) {
+    showPublishStatus("Ingen ventende betaling funnet.", true);
+    return;
+  }
+  const result = await confirmPaymentOrderById(latestPendingOrderId, "manual_ui_confirmation");
+  if (!result.ok) {
+    const data = result.data || {};
     showPublishStatus(data.detail || "Kunne ikke bekrefte betaling.", true);
     return;
   }
@@ -1393,6 +1490,39 @@ async function confirmLatestPayment(){
   showPublishStatus("Betaling bekreftet. Annonsen er aktiv.");
   latestPendingOrderId = null;
   fetchItems();
+}
+
+async function handleStripeReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const payment = params.get("payment");
+  const orderId = Number(params.get("order_id") || 0);
+  const sessionId = params.get("session_id") || "";
+
+  if (payment === "success" && orderId > 0) {
+    latestPendingOrderId = orderId;
+    const result = await confirmPaymentOrderById(orderId, sessionId || "stripe_checkout_success");
+    if (result.ok) {
+      showPublishStatus("Annonse publisert", false);
+      fetchItems();
+    } else {
+      const data = result.data || {};
+      showPublishStatus(data.detail || "Betaling registrert, men bekrefting feilet.", true);
+    }
+    params.delete("payment");
+    params.delete("order_id");
+    params.delete("session_id");
+    const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+    window.history.replaceState({}, "", next);
+    return;
+  }
+
+  if (payment === "cancel") {
+    showPublishStatus("Betaling avbrutt. Du kan prøve igjen.", true);
+    params.delete("payment");
+    params.delete("order_id");
+    const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+    window.history.replaceState({}, "", next);
+  }
 }
 
 async function contactSeller(itemId, titleText){
@@ -1507,6 +1637,7 @@ async function runHighLogicAssistant(){
 
 window.onload=()=>{
 setLang("no");
+handleStripeReturn();
 const qCategory = new URLSearchParams(window.location.search).get("category");
 if (qCategory && categoryItems.some(c => c.key.toLowerCase() === qCategory.toLowerCase())) {
   const match = categoryItems.find(c => c.key.toLowerCase() === qCategory.toLowerCase());
@@ -1532,6 +1663,7 @@ const flowModeEl = document.getElementById("flowListingMode");
 if (flowPriceEl) flowPriceEl.addEventListener("input", renderFlowPricingPreview);
 if (flowCategoryEl) flowCategoryEl.addEventListener("change", renderFlowPricingPreview);
 if (flowModeEl) flowModeEl.addEventListener("change", renderFlowPricingPreview);
+updatePaymentActionButtons();
 }
 </script>
 

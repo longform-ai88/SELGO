@@ -70,6 +70,9 @@ app.add_middleware(
 SECRET = "change-this"
 ALGO = "HS256"
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8000/app")
+STRIPE_SUCCESS_URL = os.getenv("STRIPE_SUCCESS_URL", "")
+STRIPE_CANCEL_URL = os.getenv("STRIPE_CANCEL_URL", "")
 VIPPS_CLIENT_ID = os.getenv("VIPPS_CLIENT_ID", "")
 VIPPS_CLIENT_SECRET = os.getenv("VIPPS_CLIENT_SECRET", "")
 VIPPS_SUBSCRIPTION_KEY = os.getenv("VIPPS_SUBSCRIPTION_KEY", "")
@@ -753,20 +756,100 @@ def _create_or_refresh_payment_order(db: Session, user: UserDB, item: ItemDB, pr
     return order
 
 
-@app.post("/payments/stripe/create-checkout-session")
-def create_stripe_checkout_session(
-    item_id: int = Form(...),
-    user: UserDB = Depends(get_user),
-    db: Session = Depends(get_db)
-):
+def _build_stripe_return_url(status: str, order_id: int):
+    if status == "success":
+        base = STRIPE_SUCCESS_URL or f"{APP_BASE_URL}?payment=success&order_id={order_id}"
+    else:
+        base = STRIPE_CANCEL_URL or f"{APP_BASE_URL}?payment=cancel&order_id={order_id}"
+
+    base = base.replace("{ORDER_ID}", str(order_id))
+    if status == "success" and "{CHECKOUT_SESSION_ID}" not in base:
+        sep = "&" if "?" in base else "?"
+        base = f"{base}{sep}session_id={{CHECKOUT_SESSION_ID}}"
+    return base
+
+
+def _create_stripe_checkout_session(order: PaymentOrderDB, item: ItemDB, user: UserDB):
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Stripe er ikke konfigurert. Sett STRIPE_SECRET_KEY i miljøvariabler."
+        )
+
+    amount_ore = int(round(float(order.amount) * 100))
+    if amount_ore <= 0:
+        raise HTTPException(status_code=400, detail="Denne annonsen krever ikke betaling")
+
+    success_url = _build_stripe_return_url("success", order.id)
+    cancel_url = _build_stripe_return_url("cancel", order.id)
+
+    payload = {
+        "mode": "payment",
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+        "line_items[0][quantity]": "1",
+        "line_items[0][price_data][currency]": "nok",
+        "line_items[0][price_data][unit_amount]": str(amount_ore),
+        "line_items[0][price_data][product_data][name]": f"SELGO listing fee: {item.title[:80]}",
+        "line_items[0][price_data][product_data][description]": f"Listing type: {order.listing_type or 'standard'}",
+        "metadata[order_id]": str(order.id),
+        "metadata[listing_id]": str(item.id),
+        "metadata[buyer_username]": user.username,
+    }
+
+    req = urllib.request.Request(
+        "https://api.stripe.com/v1/checkout/sessions",
+        data=urllib.parse.urlencode(payload).encode(),
+        headers={
+            "Authorization": f"Bearer {STRIPE_SECRET_KEY}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            response_json = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode(errors="ignore")
+        detail = "Stripe request feilet"
+        try:
+            parsed = json.loads(raw)
+            detail = parsed.get("error", {}).get("message") or detail
+        except Exception:
+            pass
+        raise HTTPException(status_code=502, detail=f"Stripe-feil: {detail}")
+    except Exception:
+        raise HTTPException(status_code=502, detail="Kunne ikke kontakte Stripe")
+
+    session_id = response_json.get("id")
+    checkout_url = response_json.get("url")
+    if not session_id or not checkout_url:
+        raise HTTPException(status_code=502, detail="Ugyldig svar fra Stripe")
+
+    return {
+        "id": session_id,
+        "url": checkout_url,
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+    }
+
+
+def _create_stripe_checkout_for_listing(item_id: int, user: UserDB, db: Session):
     item = db.query(ItemDB).filter(ItemDB.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Listing not found")
+
     owner = db.query(ListingOwnerDB).filter(ListingOwnerDB.item_id == item_id).first()
     if not owner or owner.username != user.username:
         raise HTTPException(status_code=403, detail="Only listing owner can pay listing fee")
 
+    # Security: never trust frontend amount; recalculate from stored listing data.
     order = _create_or_refresh_payment_order(db=db, user=user, item=item, provider="stripe")
+    checkout = _create_stripe_checkout_session(order=order, item=item, user=user)
+
+    order.provider_reference = checkout["id"]
+    db.commit()
 
     return {
         "order_id": order.id,
@@ -774,9 +857,61 @@ def create_stripe_checkout_session(
         "provider": "stripe",
         "status": "created",
         "amount": order.amount,
-        "integration_ready": bool(STRIPE_SECRET_KEY),
-        "next_step": "Set STRIPE_SECRET_KEY and wire Stripe Checkout Session API call, then confirm via /payments/orders/{order_id}/confirm."
+        "currency": order.currency,
+        "checkout_session_id": checkout["id"],
+        "checkout_url": checkout["url"],
+        "success_url": checkout["success_url"],
+        "cancel_url": checkout["cancel_url"],
     }
+
+
+@app.get("/success")
+def stripe_success_redirect(order_id: int = None, session_id: str = ""):
+    query = "?payment=success"
+    if order_id is not None:
+        query += f"&order_id={order_id}"
+    if session_id:
+        query += f"&session_id={urllib.parse.quote(session_id)}"
+    return RedirectResponse(f"{APP_BASE_URL}{query}")
+
+
+@app.get("/cancel")
+def stripe_cancel_redirect(order_id: int = None):
+    query = "?payment=cancel"
+    if order_id is not None:
+        query += f"&order_id={order_id}"
+    return RedirectResponse(f"{APP_BASE_URL}{query}")
+
+
+@app.post("/payments/stripe/create-checkout-session")
+def create_stripe_checkout_session(
+    item_id: int = Form(...),
+    user: UserDB = Depends(get_user),
+    db: Session = Depends(get_db)
+):
+    return _create_stripe_checkout_for_listing(item_id=item_id, user=user, db=db)
+
+
+@app.post("/create-checkout-session")
+def create_checkout_session_compat(
+    item_id: int = Form(None),
+    listing_id: int = Form(None),
+    amount: float = Form(None),
+    title: str = Form(""),
+    category: str = Form(""),
+    listing_mode: str = Form(""),
+    user: UserDB = Depends(get_user),
+    db: Session = Depends(get_db)
+):
+    target_item_id = item_id if item_id is not None else listing_id
+    if not target_item_id:
+        raise HTTPException(status_code=400, detail="item_id eller listing_id er påkrevd")
+
+    # amount/title/category/listing_mode are accepted for frontend compatibility,
+    # but backend still recalculates payment from database for security.
+    _ = amount, title, category, listing_mode
+
+    return _create_stripe_checkout_for_listing(item_id=target_item_id, user=user, db=db)
 
 
 @app.post("/payments/vipps/create-order")
