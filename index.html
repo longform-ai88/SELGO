@@ -1382,22 +1382,27 @@ async function login(mode){
   const origText = loginBtn ? loginBtn.textContent : "";
   if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = "Laster..."; }
   try {
-  const form = new FormData();
+  let email = "";
+  let password = "";
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
     if (!ph || !pw) { if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
-    form.append("phone", ph);
-    form.append("password", pw);
+    email = ph;
+    password = pw;
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
     if (!u || !pw) { if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
-    form.append("username", u);
-    form.append("password", pw);
+    email = u;
+    password = pw;
   }
 
-  const res = await fetch(API+"/login", { method:"POST", body: form });
+  const res = await fetch("https://sego-qmo1.onrender.com/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
   if (!res.ok) {
     const err = await readErrorPayload(res);
     showAuthMsg(`Innlogging feilet (${res.status}). ${err.detail || ""}`.trim(), true);
