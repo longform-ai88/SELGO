@@ -923,7 +923,7 @@ function maybePromptApiSetup(reasonText) {
   const wantsSetup = confirm(msg);
   if (!wantsSetup) return;
 
-  const entered = prompt("Lim inn backend URL (f.eks. https://din-backend.onrender.com):", current || "");
+  const entered = prompt("Lim inn backend URL (f.eks. ):", current || "https://sego.onrender.com");
   if (!entered) return;
   if (!saveApiBase(entered)) return;
   alert("API-base lagret. Siden lastes på nytt.");
@@ -1427,27 +1427,29 @@ async function register(mode){
   const origText = registerBtn ? registerBtn.textContent : "";
   if (registerBtn) { registerBtn.disabled = true; registerBtn.textContent = "Laster..."; }
   try {
-  const form = new FormData();
+  let email = "";
+  let password = "";
   const sellerType = (document.getElementById("sellerType")?.value || "privat").toLowerCase();
   const companyName = document.getElementById("companyName")?.value || "";
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
     if (!ph || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
-    form.append("phone", ph);
-    form.append("password", pw);
+    email = ph;
+    password = pw;
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
     if (!u || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
-    form.append("username", u);
-    form.append("password", pw);
+    email = u;
+    password = pw;
   }
 
-  form.append("seller_type", sellerType);
-  form.append("company_name", companyName);
-
-  const res = await fetch(API+"/register", { method:"POST", body: form });
+  const res = await fetch("https://sego-qmo1.onrender.com/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, seller_type: sellerType, company_name: companyName })
+  });
   if (!res.ok) {
     const err = await readErrorPayload(res);
     showAuthMsg(`Registrering feilet (${res.status}). ${err.detail || ""}`.trim(), true);
