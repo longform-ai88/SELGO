@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SELGO</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23a259ff'/><stop offset='100%25' stop-color='%23ff6a00'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text x='50' y='68' font-size='52' font-family='sans-serif' font-weight='900' fill='white' text-anchor='middle'>S</text></svg>">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
+
+* {
+box-sizing: border-box;
+}
+
+body {
+font-family: "Manrope", "Segoe UI", sans-serif;
+background: radial-gradient(circle at 10% 10%, #d8ccff 0%, #e8e2ff 35%, #ddd6f5 100%);
+padding: 24px;
+color: #102039;
+margin: 0;
+position: relative;
+}
+
+.page-layout {
+display: flex;
+align-items: flex-start;
+gap: 24px;
+max-width: 1260px;
+margin: 0 auto;
+}
+
+.ai-assistant {
+flex-shrink: 0;
+width: 260px;
+position: sticky;
+top: 20px;
+background: #ffffff;
+color: #111;
+padding: 12px;
+border-radius: 14px;
+font-size: 11px;
+box-shadow: 0 14px 40px rgba(16, 32, 57, 0.14);
+border: 1px solid #dce3ef;
+}
+
+.ai-assistant.collapsed {
+width: 200px;
+padding-bottom: 10px;
+}
+
+.ai-assistant h3 {
+margin: 0 0 10px 0;
+font-size: 15px;
+letter-spacing: 0.1px;
+}
+
+.assistant-top {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 8px;
+}
+
+.assistant-toggle {
+width: auto;
+margin: 0;
+padding: 5px 10px;
+font-size: 11px;
+border-radius: 8px;
+background: #eef3ff;
+color: #0d274f;
+border: 1px solid #c7d5ef;
+}
+
+.ai-assistant.collapsed .ai-output,
+.ai-assistant.collapsed #aiPrompt,
+.ai-assistant.collapsed #aiRunBtn {
+display: none;
+}
+
+.ai-assistant input,
+.ai-assistant button,
+.ai-assistant textarea {
+margin: 6px 0;
+font-size: 12px;
+width: 100%;
+}
+
+.ai-output {
+background: #f7f5ff;
+border: 1px solid #d7dff0;
+border-radius: 10px;
+padding: 10px;
+white-space: pre-wrap;
+min-height: 100px;
+max-height: 340px;
+overflow-y: auto;
+line-height: 1.5;
+font-size: 12px;
+}
+
+.ai-msg {
+margin-bottom: 10px;
+}
+
+.ai-msg.user {
+text-align: right;
+}
+
+.ai-msg.user span {
+display: inline-block;
+background: #0d274f;
+color: #fff;
+border-radius: 10px 10px 2px 10px;
+padding: 6px 10px;
+max-width: 90%;
+font-size: 12px;
+}
+
+.ai-msg.bot span {
+display: inline-block;
+background: #fff;
+border: 1px solid #dce3ef;
+border-radius: 10px 10px 10px 2px;
+padding: 6px 10px;
+max-width: 95%;
+font-size: 12px;
+color: #102039;
+}
+
+.container {
+flex: 1;
+min-width: 0;
+padding-top: 0;
+}
+
+input, button, select {
+width: 100%;
+padding: 11px 12px;
+margin: 8px 0;
+border-radius: 10px;
+border: 1px solid #cfd8e8;
+background: #fff;
+font-family: inherit;
+font-size: 14px;
+color: #102039;
+}
+
+textarea {
+width: 100%;
+min-height: 96px;
+padding: 11px 12px;
+margin: 8px 0;
+border-radius: 10px;
+border: 1px solid #cfd8e8;
+background: #fff;
+font-family: inherit;
+font-size: 14px;
+color: #102039;
+resize: vertical;
+}
+
+.auth-tabs {
+display: flex;
+gap: 0;
+border-bottom: 2px solid #e5eaf2;
+margin-bottom: 16px;
+}
+
+.auth-tab {
+flex: 1;
+background: none;
+border: none;
+border-bottom: 3px solid transparent;
+margin: 0 0 -2px 0;
+padding: 10px 4px;
+font-size: 13px;
+font-weight: 700;
+color: #7a8fa8;
+cursor: pointer;
+border-radius: 0;
+transition: color 0.15s, border-color 0.15s;
+width: auto;
+}
+
+.auth-tab.active {
+color: #0d274f;
+border-bottom-color: #0d274f;
+}
+
+.auth-pane { display: none; }
+.auth-pane.active { display: block; }
+
+.vipps-btn {
+background: #FF5B24;
+color: #fff;
+border: none;
+border-radius: 10px;
+font-weight: 800;
+font-size: 15px;
+padding: 13px;
+width: 100%;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 10px;
+margin-top: 8px;
+transition: background 0.15s;
+}
+
+.vipps-btn:hover { background: #e04c1a; }
+
+.vipps-logo {
+font-size: 18px;
+font-style: italic;
+font-weight: 900;
+letter-spacing: -0.5px;
+}
+
+.auth-divider {
+text-align: center;
+color: #9baabf;
+font-size: 12px;
+margin: 10px 0 4px;
+}
+
+.lang-switch {
+display: flex;
+gap: 6px;
+position: absolute;
+top: 20px;
+right: 24px;
+}
+
+.lang-switch button {
+width: auto;
+flex: none;
+padding: 5px 12px;
+font-size: 12px;
+font-weight: 700;
+margin: 0;
+border-radius: 8px;
+}
+
+.category-wrap {
+background: rgba(255,255,255,0.9);
+padding: 18px;
+border-radius: 16px;
+margin-bottom: 18px;
+border: 1px solid #dce3ef;
+box-shadow: 0 8px 24px rgba(16,32,57,0.06);
+}
+
+.category-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+gap: 10px;
+}
+
+.cat-card {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+background: #fff;
+border: 2px solid #e5eaf2;
+border-radius: 14px;
+padding: 14px 8px 10px;
+cursor: pointer;
+transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+user-select: none;
+gap: 6px;
+}
+
+.cat-card:hover {
+border-color: #0d274f;
+box-shadow: 0 4px 16px rgba(13,39,79,0.12);
+}
+
+.cat-card.active {
+border-color: #0d274f;
+background: #eaf0fa;
+}
+
+.cat-card .cat-icon {
+font-size: 26px;
+line-height: 1;
+}
+
+.cat-card .cat-label {
+font-size: 12px;
+font-weight: 700;
+color: #102039;
+text-align: center;
+line-height: 1.2;
+}
+
+.cat-card.active .cat-label {
+color: #0d274f;
+}
+
+.subcat-row {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin-top: 14px;
+padding-top: 14px;
+border-top: 1px solid #e5eaf2;
+animation: fadeIn 0.18s ease;
+}
+
+.subcat-chip {
+background: #f4f7fb;
+border: 1.5px solid #cfd8e8;
+border-radius: 20px;
+padding: 6px 16px;
+font-size: 13px;
+font-weight: 600;
+color: #102039;
+cursor: pointer;
+transition: background 0.13s, border-color 0.13s;
+}
+
+.subcat-chip:hover {
+background: #e2eaf7;
+border-color: #0d274f;
+}
+
+.subcat-chip.active {
+background: #0d274f;
+border-color: #0d274f;
+color: #fff;
+}
+
+button {
+background: linear-gradient(180deg, #0d274f 0%, #0a1f3f 100%);
+color: white;
+border: none;
+border-radius: 10px;
+font-weight: 700;
+cursor: pointer;
+}
+
+.card {
+background: white;
+padding: 14px;
+border-radius: 14px;
+margin-bottom: 12px;
+border: 1px solid #dce3ef;
+box-shadow: 0 10px 24px rgba(16, 32, 57, 0.07);
+animation: fadeIn 0.2s ease-out;
+}
+
+.card img {
+width: 100%;
+max-height: 240px;
+object-fit: cover;
+border-radius: 8px;
+margin: 8px 0;
+}
+
+.hint {
+font-size: 13px;
+color: #4a5872;
+margin-top: 6px;
+}
+
+.inline-row {
+display: flex;
+gap: 10px;
+align-items: center;
+flex-wrap: wrap;
+}
+
+.inline-row label {
+display: flex;
+align-items: center;
+gap: 6px;
+font-size: 13px;
+color: #304968;
+}
+
+.inline-row input[type="checkbox"] {
+width: auto;
+margin: 0;
+}
+
+.payment-status {
+margin-top: 10px;
+font-size: 13px;
+color: #233a5d;
+background: #eef4ff;
+border: 1px solid #c9d8f2;
+border-radius: 10px;
+padding: 10px;
+display: none;
+}
+
+.pricing-preview {
+margin-top: 8px;
+font-size: 13px;
+color: #1d375c;
+background: #f5f8ff;
+border: 1px solid #d4def2;
+border-radius: 10px;
+padding: 10px;
+}
+
+.vipps-secondary {
+background: #ff5b24;
+border: 1px solid #e04c1a;
+}
+
+.listing-modal-backdrop {
+position: fixed;
+inset: 0;
+background: rgba(10, 20, 40, 0.45);
+display: none;
+align-items: center;
+justify-content: center;
+padding: 18px;
+z-index: 999;
+}
+
+.listing-modal {
+width: min(680px, 100%);
+background: #fff;
+border-radius: 16px;
+border: 1px solid #dce3ef;
+box-shadow: 0 20px 60px rgba(16, 32, 57, 0.22);
+padding: 16px;
+}
+
+.flow-steps {
+font-size: 12px;
+color: #5f7594;
+margin-bottom: 10px;
+}
+
+.flow-panel {
+display: none;
+}
+
+.flow-panel.active {
+display: block;
+}
+
+.flow-actions {
+display: flex;
+justify-content: space-between;
+gap: 8px;
+margin-top: 12px;
+}
+
+.flow-actions button {
+width: auto;
+min-width: 120px;
+}
+
+.seller-badge {
+display: inline-block;
+padding: 4px 8px;
+border-radius: 999px;
+font-size: 11px;
+font-weight: 800;
+margin-right: 6px;
+border: 1px solid #c7d5ef;
+background: #eef4ff;
+color: #173764;
+}
+
+.legal-links {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin: 14px 0 8px;
+}
+
+.legal-links button {
+width: auto;
+background: #f2f6ff;
+color: #0d274f;
+border: 1px solid #c7d5ef;
+padding: 8px 12px;
+font-size: 12px;
+}
+
+.legal-modal-backdrop {
+position: fixed;
+inset: 0;
+background: rgba(10, 20, 40, 0.45);
+display: none;
+align-items: center;
+justify-content: center;
+padding: 18px;
+z-index: 1000;
+}
+
+.legal-modal {
+width: min(760px, 100%);
+background: #fff;
+border-radius: 16px;
+border: 1px solid #dce3ef;
+box-shadow: 0 20px 60px rgba(16, 32, 57, 0.22);
+padding: 16px;
+max-height: 80vh;
+overflow-y: auto;
+}
+
+.panel {
+background: rgba(255, 255, 255, 0.9);
+border: 1px solid #dce3ef;
+border-radius: 14px;
+padding: 14px;
+margin-bottom: 14px;
+box-shadow: 0 8px 24px rgba(16, 32, 57, 0.06);
+}
+
+.panel h2 {
+margin-top: 0;
+margin-bottom: 8px;
+}
+
+.top-cta-bar {
+text-align: center;
+margin-bottom: 22px;
+padding-top: 8px;
+}
+
+.main-title {
+display: flex;
+align-items: baseline;
+justify-content: flex-start;
+gap: 12px;
+margin-bottom: 8px;
+}
+
+.post-cta {
+width: auto;
+flex: none;
+padding: 13px 32px;
+font-size: 15px;
+font-weight: 800;
+background: linear-gradient(180deg, #ff8e2b 0%, #ff6a00 100%);
+border: 1px solid #e15a00;
+box-shadow: 0 8px 20px rgba(255, 106, 0, 0.24);
+}
+
+.post-cta:hover {
+filter: brightness(0.98);
+}
+
+.main-title h1 {
+margin: 0;
+font-size: 36px;
+letter-spacing: 0.2px;
+}
+
+.logo-wrap {
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+gap: 2px;
+}
+
+.logo-wordmark {
+font-size: 42px;
+font-weight: 800;
+letter-spacing: 6px;
+line-height: 1;
+background: linear-gradient(120deg, #a259ff 0%, #ff6a00 40%, #ffb300 70%, #00c6ff 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+text-transform: uppercase;
+filter: drop-shadow(0 2px 8px rgba(162,89,255,0.18));
+}
+
+.logo-dot {
+display: inline-block;
+width: 9px;
+height: 9px;
+border-radius: 50%;
+background: linear-gradient(135deg, #ff6a00, #a259ff);
+-webkit-text-fill-color: initial;
+margin-left: 2px;
+vertical-align: middle;
+margin-bottom: 6px;
+}
+
+.logo-tagline {
+font-size: 11px;
+font-weight: 700;
+letter-spacing: 3.5px;
+text-transform: uppercase;
+background: linear-gradient(90deg, #a259ff, #ff6a00);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+opacity: 0.85;
+}
+
+.subtitle {
+margin: 2px 0 0 0;
+color: #476086;
+font-size: 14px;
+}
+
+.form-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 10px;
+}
+
+.form-grid .full {
+grid-column: 1 / -1;
+}
+
+.card-actions {
+display: grid;
+grid-template-columns: 1fr 1fr 1fr;
+gap: 8px;
+margin-top: 10px;
+}
+
+.ghost {
+background: #f2f6ff;
+color: #0d274f;
+border: 1px solid #c7d5ef;
+}
+
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(4px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 980px) {
+.page-layout {
+flex-direction: column;
+}
+
+.ai-assistant {
+width: 100%;
+position: static;
+margin-bottom: 12px;
+}
+}
+
+@media (max-width: 700px) {
+body {
+padding: 14px;
+}
+
+.form-grid,
+.card-actions {
+grid-template-columns: 1fr;
+}
+
+.main-title h1 {
+font-size: 30px;
+}
+}
+</style>
+</head>
+
+<body>
+
+<div class="lang-switch">
+<button onclick="setLang('no')">NO</button>
+<button onclick="setLang('en')">EN</button>
+</div>
+
+<div class="top-cta-bar">
+  <button class="post-cta" type="button" onclick="openListingFlow()">+ Legg ut annonse</button>
+</div>
+
+<div class="page-layout">
+
+<div class="ai-assistant">
+<div class="assistant-top">
+<h3>SELGO Assistent</h3>
+<button id="assistantToggle" class="assistant-toggle" onclick="toggleAssistant()">Skjul</button>
+</div>
+<div class="ai-output" id="aiOutput"><div class="ai-msg bot"><span>Hva kan jeg hjelpe deg med?</span></div></div>
+<input id="aiPrompt" placeholder="Skriv her..." onkeydown="if(event.key==='Enter')runHighLogicAssistant()">
+<button onclick="runHighLogicAssistant()" id="aiRunBtn">Send</button>
+</div>
+
+<div class="container">
+
+<div class="main-title">
+  <div class="logo-wrap">
+    <span class="logo-wordmark">SELGO<span class="logo-dot"></span></span>
+    <span class="logo-tagline">Norges markedsplass</span>
+  </div>
+</div>
+<p id="welcome" class="subtitle"></p>
+
+<div class="category-wrap">
+<h2 id="catTitle"></h2>
+<div class="category-grid" id="categoryButtons"></div>
+<div class="subcat-row" id="subcatRow" style="display:none"></div>
+</div>
+
+<div class="panel">
+<h2 id="loginTitle">Logg inn / Registrer</h2>
+
+<div class="auth-tabs">
+  <button class="auth-tab active" onclick="switchAuthTab('username',this)">Brukernavn</button>
+  <button class="auth-tab" onclick="switchAuthTab('mobile',this)">Mobilnummer</button>
+  <button class="auth-tab" onclick="switchAuthTab('vipps',this)">Vipps</button>
+</div>
+
+<!-- Brukernavn-pane -->
+<div class="auth-pane active" id="pane-username">
+  <input id="username" placeholder="Brukernavn">
+  <input id="password" type="password" placeholder="Passord">
+  <select id="sellerType">
+    <option value="privat">Selgertype: Privat</option>
+    <option value="naering">Selgertype: Næring</option>
+  </select>
+  <input id="companyName" placeholder="Firmanavn (kun for næring)">
+  <button onclick="login('username')" id="loginBtn">Logg inn</button>
+  <button onclick="register('username')" id="registerBtn" class="ghost">Registrer ny bruker</button>
+    <button type="button" class="vipps-secondary" onclick="continueWithVipps()">Fortsett med Vipps</button>
+</div>
+
+<!-- Mobilnummer-pane -->
+<div class="auth-pane" id="pane-mobile">
+  <input id="phoneInput" type="tel" placeholder="Mobilnummer (f.eks. 98765432)" maxlength="20">
+  <input id="phonePassword" type="password" placeholder="Velg passord">
+  <button onclick="login('mobile')">Logg inn med mobil</button>
+  <button onclick="register('mobile')" class="ghost">Registrer med mobilnummer</button>
+</div>
+
+<!-- Vipps-pane -->
+<div class="auth-pane" id="pane-vipps">
+  <p style="font-size:13px;color:#4a5872;margin:4px 0 10px">Logg inn eller registrer deg raskt og trygt med Vipps.</p>
+  <button class="vipps-btn" onclick="loginWithVipps()">
+    <span class="vipps-logo">Vipps</span>
+    <span>Logg inn med Vipps</span>
+  </button>
+  <p id="vippsStatus" style="font-size:12px;color:#e05000;margin-top:8px;display:none"></p>
+</div>
+
+</div>
+
+<button onclick="logout()" id="logoutBtn" class="ghost" style="display:none">Logg ut</button>
+
+<div class="panel">
+<h2 id="addTitle"></h2>
+<div class="form-grid">
+<input id="title" class="full" placeholder="Tittel (f.eks. Tesla Model 3 2021)">
+<textarea id="desc" class="full" placeholder="Skriv en tydelig beskrivelse av varen..."></textarea>
+<input id="price" type="number" min="0" step="1" placeholder="Pris (NOK)">
+<input id="city" placeholder="Sted/By">
+<select id="category" class="full">
+<option value="Bil">Bil - Ny, Brukt, Leiebil, Bobil, Russ Buss, osv.</option>
+<option value="Motorsykkel">Motorsykkel - Ny, Brukt</option>
+<option value="Bolig">Bolig - Kjop, Salg, Leie Bolig/Leilighet</option>
+<option value="Sport">Sport - Ski, Fotball, Handball, Ping Pong, osv.</option>
+<option value="Klær">Klaer - Sko, Dress, osv.</option>
+<option value="Sykkel">Sykkel - Ny, Brukt</option>
+<option value="Gis bort">Gis bort</option>
+</select>
+<select id="listingMode" class="full">
+<option value="">Listing-type (brukes for bolig)</option>
+<option value="sale">Bolig til salgs</option>
+<option value="rent">Bolig til leie</option>
+</select>
+<select id="paymentProvider">
+<option value="vipps">Vipps</option>
+<option value="stripe">Stripe</option>
+</select>
+<div class="inline-row">
+  <label><input id="boostToggle" type="checkbox"> Boost annonsen (kun bil)</label>
+</div>
+<input id="image" class="full" type="file" accept="image/*">
+</div>
+<div class="hint" id="formHint">Velg kategori over for automatisk utfylling av skjema.</div>
+<div class="pricing-preview" id="pricingPreview">Prisoversikt: -</div>
+<button onclick="addItem()" id="addBtn"></button>
+<div id="publishStatus" class="payment-status"></div>
+</div>
+
+<h2 id="listTitle"></h2>
+<div id="items"></div>
+
+<div class="legal-links">
+  <button type="button" onclick="openLegalModal('tos')">Vilkår for bruk</button>
+  <button type="button" onclick="openLegalModal('privacy')">Personvernerklæring</button>
+  <button type="button" onclick="openLegalModal('gdpr')">GDPR: Sletting av brukerdata</button>
+</div>
+
+</div><!-- end .container -->
+</div><!-- end .page-layout -->
+
+<div id="listingFlowModal" class="listing-modal-backdrop" onclick="closeListingFlow(event)">
+  <div class="listing-modal" onclick="event.stopPropagation()">
+    <div class="assistant-top" style="margin-bottom:8px">
+      <h3 style="margin:0">Ny annonse</h3>
+      <button type="button" class="ghost" onclick="closeListingFlow()">Lukk</button>
+    </div>
+    <div class="flow-steps" id="flowStepsLabel">Steg 1 av 4</div>
+
+    <div class="flow-panel active" data-step="1">
+      <label for="flowCategory">Steg 1: Velg kategori</label>
+      <select id="flowCategory">
+        <option value="Bil">Bil</option>
+        <option value="Motorsykkel">Motorsykkel</option>
+        <option value="Bolig">Bolig</option>
+        <option value="Sport">Sport</option>
+        <option value="Klær">Klær</option>
+        <option value="Sykkel">Sykkel</option>
+        <option value="Gis bort">Gis bort</option>
+      </select>
+      <select id="flowListingMode">
+        <option value="">Boligtype (kun for Bolig)</option>
+        <option value="sale">Bolig til salgs</option>
+        <option value="rent">Bolig til leie</option>
+      </select>
+    </div>
+
+    <div class="flow-panel" data-step="2">
+      <label for="flowTitle">Steg 2: Tittel og beskrivelse</label>
+      <input id="flowTitle" placeholder="Tittel">
+      <textarea id="flowDesc" placeholder="Beskrivelse"></textarea>
+      <input id="flowPrice" type="number" min="0" step="1" placeholder="Pris (NOK)">
+      <div class="inline-row">
+        <label><input id="flowBoost" type="checkbox"> Boost (kun bil)</label>
+      </div>
+    </div>
+
+    <div class="flow-panel" data-step="3">
+      <label>Steg 3: Prisberegning</label>
+      <div class="pricing-preview" id="flowPricingPreview">Prisoversikt: -</div>
+    </div>
+
+    <div class="flow-panel" data-step="4">
+      <label for="flowPaymentProvider">Steg 4: Betaling</label>
+      <select id="flowPaymentProvider">
+        <option value="vipps">Vipps</option>
+        <option value="stripe">Stripe</option>
+      </select>
+      <div class="hint">Trykk under for å fylle inn skjemaet og fortsette til betaling.</div>
+      <button type="button" class="post-cta" onclick="goToPaymentFromFlow()">Gå til betaling</button>
+    </div>
+
+    <div class="flow-actions">
+      <button type="button" class="ghost" onclick="prevListingFlowStep()">Forrige</button>
+      <button type="button" onclick="nextListingFlowStep()">Neste</button>
+    </div>
+  </div>
+</div>
+
+<div id="legalModal" class="legal-modal-backdrop" onclick="closeLegalModal(event)">
+  <div class="legal-modal" onclick="event.stopPropagation()">
+    <div class="assistant-top" style="margin-bottom:8px">
+      <h3 id="legalTitle" style="margin:0">Juridisk informasjon</h3>
+      <button type="button" class="ghost" onclick="closeLegalModal()">Lukk</button>
+    </div>
+    <div id="legalContent" style="font-size:14px;line-height:1.55;color:#1a3557"></div>
+  </div>
+</div>
+
+<script>
+// --- API CONFIG ---
+// Set window.SELGO_API_BASE in a deployment config or environment to override.
+// For local dev: http://127.0.0.1:8000
+// For production: https://your-backend.onrender.com
+const API = (typeof window.SELGO_API_BASE !== "undefined" && window.SELGO_API_BASE)
+  ? window.SELGO_API_BASE
+  : "http://127.0.0.1:8000";
+// --- END CONFIG ---
+
+let lang = "no";
+
+const t = {
+no: {
+welcome:"Velkommen til SELGO",
+login:"Logg inn",
+register:"Registrer",
+logout:"Logg ut",
+add:"Publiser",
+addTitle:"Ny annonse",
+list:"Annonser",
+categories:"Kategorier",
+allCategories:"Vis alle",
+buyNow:"Jeg vil kjope",
+contactSeller:"Kontakt selger",
+payVipps:"Betal med Vipps",
+payStripe:"Betal med Stripe"
+},
+en: {
+welcome:"Welcome to SELGO",
+login:"Login",
+register:"Register",
+logout:"Logout",
+add:"Publish",
+addTitle:"New listing",
+list:"Listings",
+categories:"Categories",
+allCategories:"Show all",
+buyNow:"I want to buy",
+contactSeller:"Contact seller",
+payVipps:"Pay with Vipps",
+payStripe:"Pay with Stripe"
+}
+};
+
+const categoryItems = [
+  { key: "Bil",        icon: "🚗", subs: ["Ny","Brukt","Leiebil","Bobil","Russ Buss"] },
+  { key: "Motorsykkel",icon: "🏍️", subs: ["Ny","Brukt","El-sykkel","Scooter"] },
+  { key: "Sykkel",     icon: "🚲", subs: ["Ny","Brukt","El-sykkel","Barnesykkel"] },
+  { key: "Bolig",      icon: "🏠", subs: ["Kjøp","Salg","Leie","Leilighet","Hytte"] },
+  { key: "Klær",       icon: "👕", subs: ["Herre","Dame","Barn","Sko","Jakke","Dress"] },
+  { key: "Sport",      icon: "⚽", subs: ["Ski","Fotball","Sykling","Håndball","Tennis","Annet"] },
+  { key: "Elektronikk",icon: "💻", subs: ["Mobil","PC","TV","Lyd","Kamera","Annet"] },
+  { key: "Gis bort",   icon: "🎁", subs: [] }
+];
+
+let allItems = [];
+let activeCategory = "ALL";
+let activeSubcat = null;
+let latestPendingOrderId = null;
+let listingFlowStep = 1;
+
+function toggleAssistant(){
+  const box = document.querySelector(".ai-assistant");
+  const btn = document.getElementById("assistantToggle");
+  if (!box || !btn) return;
+  box.classList.toggle("collapsed");
+  btn.innerText = box.classList.contains("collapsed") ? "Vis" : "Skjul";
+}
+
+function continueWithVipps(){
+  const vippsTab = Array.from(document.querySelectorAll(".auth-tab")).find(tab => tab.innerText.toLowerCase().includes("vipps"));
+  if (vippsTab) switchAuthTab("vipps", vippsTab);
+  const statusEl = document.getElementById("vippsStatus");
+  if (statusEl) {
+    statusEl.textContent = "Vipps-innlogging blir tilgjengelig her. Klar for videre integrasjon.";
+    statusEl.style.display = "block";
+  }
+}
+
+const legalDocs = {
+  tos: {
+    title: "Vilkår for bruk",
+    html: `<p>Ved bruk av SELGO godtar du disse vilkårene. Du er ansvarlig for at annonseinnhold er korrekt, lovlig og ikke krenker andres rettigheter.</p>
+<p>Brukere må ikke publisere svindel, ulovlige produkter eller villedende informasjon. SELGO kan fjerne innhold som bryter vilkårene.</p>
+<p>Betalte annonser refunderes normalt ikke etter publisering med mindre annet følger av ufravikelig lov.</p>`
+  },
+  privacy: {
+    title: "Personvernerklæring",
+    html: `<p>SELGO behandler personopplysninger for å levere tjenesten: brukerprofil, annonser, meldinger og betalingstransaksjoner.</p>
+<p>Vi lagrer kun nødvendige opplysninger og beskytter disse med tekniske og organisatoriske tiltak. Opplysninger deles kun med betalingsleverandører og lovpålagte mottakere.</p>
+<p>Du har rett til innsyn, retting og dataportabilitet i henhold til personvernregelverket.</p>`
+  },
+  gdpr: {
+    title: "Rutiner for sletting av brukerdata (GDPR)",
+    html: `<p>Du kan be om sletting av konto og personopplysninger ved å kontakte support. Vi bekrefter forespørselen og identiteten før sletting.</p>
+<p>Data som ikke er lovpålagt å lagre slettes eller anonymiseres innen 30 dager. Transaksjonsdata kan oppbevares lenger hvis regnskapslov krever det.</p>
+<p>Når sletting er gjennomført, får du en bekreftelse på hva som er slettet og hva som eventuelt må beholdes.</p>`
+  }
+};
+
+function openLegalModal(key){
+  const modal = document.getElementById("legalModal");
+  const title = document.getElementById("legalTitle");
+  const content = document.getElementById("legalContent");
+  const doc = legalDocs[key] || legalDocs.tos;
+  if (!modal || !title || !content) return;
+  title.innerText = doc.title;
+  content.innerHTML = doc.html;
+  modal.style.display = "flex";
+}
+
+function closeLegalModal(event){
+  if (event && event.target && event.target.id !== "legalModal") return;
+  const modal = document.getElementById("legalModal");
+  if (modal) modal.style.display = "none";
+}
+
+function calculatePricingPreview(categoryValue, priceValue, listingModeValue){
+  const categoryText = (categoryValue || "").toLowerCase();
+  const listingMode = (listingModeValue || "").toLowerCase();
+  const priceNum = Number(priceValue || 0);
+
+  if (categoryText.startsWith("bil")) {
+    return "499 kr for 60 dager";
+  }
+
+  if (categoryText.startsWith("bolig")) {
+    if (listingMode === "sale") return "1499 kr for 120 dager";
+    if (listingMode === "rent") return "799 kr for 60 dager";
+    return "Velg boligtype (salg eller leie) for riktig pris";
+  }
+
+  if (!Number.isFinite(priceNum) || priceNum <= 0) {
+    return "Skriv inn pris for å se kostnad";
+  }
+  if (priceNum < 2000) return "Gratis";
+  if (priceNum <= 9999) return "199 kr for 60 dager";
+  if (priceNum <= 20000) return "299 kr for 60 dager";
+  return "299 kr for 60 dager";
+}
+
+function renderPricingPreview(){
+  const el = document.getElementById("pricingPreview");
+  if (!el) return;
+  const value = calculatePricingPreview(
+    document.getElementById("category").value,
+    document.getElementById("price").value,
+    document.getElementById("listingMode").value
+  );
+  el.innerText = `Prisoversikt: ${value}`;
+}
+
+function renderFlowPricingPreview(){
+  const el = document.getElementById("flowPricingPreview");
+  if (!el) return;
+  const value = calculatePricingPreview(
+    document.getElementById("flowCategory").value,
+    document.getElementById("flowPrice").value,
+    document.getElementById("flowListingMode").value
+  );
+  el.innerText = `Prisoversikt: ${value}`;
+}
+
+function openListingFlow(){
+  const modal = document.getElementById("listingFlowModal");
+  if (!modal) return;
+  listingFlowStep = 1;
+  updateListingFlowStep();
+  modal.style.display = "flex";
+}
+
+function closeListingFlow(event){
+  if (event && event.target && event.target.id !== "listingFlowModal") return;
+  const modal = document.getElementById("listingFlowModal");
+  if (modal) modal.style.display = "none";
+}
+
+function updateListingFlowStep(){
+  document.querySelectorAll(".flow-panel").forEach(panel => {
+    panel.classList.toggle("active", Number(panel.dataset.step) === listingFlowStep);
+  });
+  const label = document.getElementById("flowStepsLabel");
+  if (label) label.innerText = `Steg ${listingFlowStep} av 4`;
+  renderFlowPricingPreview();
+}
+
+function nextListingFlowStep(){
+  if (listingFlowStep < 4) {
+    listingFlowStep += 1;
+    updateListingFlowStep();
+  }
+}
+
+function prevListingFlowStep(){
+  if (listingFlowStep > 1) {
+    listingFlowStep -= 1;
+    updateListingFlowStep();
+  }
+}
+
+function goToPaymentFromFlow(){
+  document.getElementById("category").value = document.getElementById("flowCategory").value;
+  document.getElementById("listingMode").value = document.getElementById("flowListingMode").value;
+  document.getElementById("title").value = document.getElementById("flowTitle").value;
+  document.getElementById("desc").value = document.getElementById("flowDesc").value;
+  document.getElementById("price").value = document.getElementById("flowPrice").value;
+  document.getElementById("boostToggle").checked = document.getElementById("flowBoost").checked;
+  document.getElementById("paymentProvider").value = document.getElementById("flowPaymentProvider").value;
+  renderPricingPreview();
+  closeListingFlow();
+  document.getElementById("addTitle").scrollIntoView({behavior: "smooth", block: "start"});
+  showPublishStatus("Skjema er utfylt. Klikk Publiser for å fortsette til betaling.", false);
+}
+
+function navigateToCategoryListings(categoryKey){
+  const params = new URLSearchParams(window.location.search);
+  if (!categoryKey || categoryKey === "ALL") {
+    params.delete("category");
+  } else {
+    params.set("category", categoryKey);
+  }
+  const nextUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+  window.history.pushState({}, "", nextUrl);
+  const list = document.getElementById("listTitle");
+  if (list) list.scrollIntoView({behavior: "smooth", block: "start"});
+}
+
+function renderCategoryButtons(){
+  const root = document.getElementById("categoryButtons");
+  let html = `<div class="cat-card ${activeCategory==="ALL"?"active":""}" data-key="ALL"><span class="cat-icon">🏷️</span><span class="cat-label">Alle</span></div>`;
+  categoryItems.forEach(c => {
+    html += `<div class="cat-card ${activeCategory===c.key?"active":""}" data-key="${c.key}"><span class="cat-icon">${c.icon}</span><span class="cat-label">${c.key}</span></div>`;
+  });
+  root.innerHTML = html;
+
+  const subRow = document.getElementById("subcatRow");
+  const activeCat = categoryItems.find(c => c.key === activeCategory);
+  if (activeCat && activeCat.subs.length > 0) {
+    let subHtml = "";
+    activeCat.subs.forEach(s => {
+      subHtml += `<button class="subcat-chip ${activeSubcat===s?"active":""}" type="button" data-sub="${s}">${s}</button>`;
+    });
+    subRow.innerHTML = subHtml;
+    subRow.style.display = "flex";
+    subRow.querySelectorAll(".subcat-chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        activeSubcat = activeSubcat === btn.dataset.sub ? null : btn.dataset.sub;
+        renderCategoryButtons();
+        renderItems();
+      });
+    });
+  } else {
+    subRow.innerHTML = "";
+    subRow.style.display = "none";
+  }
+
+  root.querySelectorAll(".cat-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const key = card.dataset.key;
+      if (activeCategory === key) {
+        activeCategory = "ALL";
+        activeSubcat = null;
+      } else {
+        activeCategory = key;
+        activeSubcat = null;
+        if (key !== "ALL") {
+          document.getElementById("category").value = key;
+          document.getElementById("formHint").innerText = `Valgt kategori: ${key}. Fyll inn tekst og bilde, og publiser.`;
+        }
+      }
+      navigateToCategoryListings(activeCategory);
+      renderCategoryButtons();
+      renderPricingPreview();
+      renderItems();
+    });
+  });
+}
+
+function renderItems(){
+let filtered = activeCategory === "ALL"
+  ? allItems
+  : allItems.filter(i => (i.category || "").toLowerCase().startsWith(activeCategory.toLowerCase()));
+if (activeSubcat) {
+  filtered = filtered.filter(i => (i.category || "").toLowerCase().includes(activeSubcat.toLowerCase()));
+}
+
+let html="";
+filtered.forEach(i=>{
+	const imageHtml = i.image_url ? `<img src="${API}/${i.image_url}" alt="${i.title}">` : "";
+  const paidInfo = (i.listing_price_paid && i.listing_price_paid > 0) ? `${i.listing_price_paid} NOK` : "0 NOK";
+  const listingType = i.listing_type || "standard";
+  const expiresText = i.expires_at ? new Date(i.expires_at).toLocaleDateString() : "-";
+  const sellerType = (i.seller_type || "privat").toLowerCase();
+  const sellerTypeText = sellerType === "naering" ? "Næring" : "Privat";
+  const sellerPublicId = i.seller_public_id || (sellerType === "naering" ? "NARING-0" : "PRIVAT-0");
+  const sellerCompanyName = i.seller_company_name ? ` (${i.seller_company_name})` : "";
+  html += `<div class="card"><h3>${i.title}</h3><p>${i.price} kr - ${i.location}</p>${imageHtml}<p>${i.description}</p><p>Kategori: ${i.category || "Ukjent"}</p><p><span class="seller-badge">${sellerTypeText}</span>Selger-ID: ${sellerPublicId}${sellerCompanyName}</p><p>Selger: ${i.seller_username || "ukjent"}</p><p>Annonsetype: ${listingType}${i.is_featured ? " (Boost)" : ""}</p><p>Avgift betalt: ${paidInfo}</p><p>Utloper: ${expiresText}</p><div class="card-actions"><button type="button" class="ghost" onclick="contactSeller(${i.id}, '${i.title.replace(/'/g, "&#39;")}')">${t[lang].contactSeller}</button></div></div>`;
+});
+
+document.getElementById("items").innerHTML=html;
+}
+
+function setLang(l){
+lang=l;
+document.getElementById("welcome").innerText=t[l].welcome;
+document.getElementById("logoutBtn").innerText=t[l].logout;
+document.getElementById("addBtn").innerText=t[l].add;
+document.getElementById("addTitle").innerText=t[l].addTitle;
+document.getElementById("listTitle").innerText=t[l].list;
+document.getElementById("catTitle").innerText=t[l].categories;
+renderCategoryButtons();
+}
+
+function showPublishStatus(message, isError=false, includeConfirm=false){
+  const el = document.getElementById("publishStatus");
+  if (!el) return;
+  const color = isError ? "#7a1f1f" : "#233a5d";
+  const border = isError ? "#efc0c0" : "#c9d8f2";
+  const bg = isError ? "#fff3f3" : "#eef4ff";
+  let html = `<div style="color:${color}">${message}</div>`;
+  if (includeConfirm && latestPendingOrderId) {
+    html += `<div style="margin-top:8px" class="inline-row"><button type="button" onclick="confirmLatestPayment()">Jeg har betalt - bekreft</button></div>`;
+  }
+  el.style.borderColor = border;
+  el.style.background = bg;
+  el.innerHTML = html;
+  el.style.display = "block";
+}
+
+function switchAuthTab(name, el) {
+  document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
+  el.classList.add("active");
+  document.getElementById("pane-" + name).classList.add("active");
+}
+
+async function fetchItems(){
+const res=await fetch(API+"/listings");
+allItems=await res.json();
+renderItems();
+}
+
+async function login(mode){
+  const form = new FormData();
+  if (mode === "mobile") {
+    const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
+    const pw = document.getElementById("phonePassword").value;
+    if (!ph || !pw) { alert("Fyll inn mobilnummer og passord"); return; }
+    form.append("phone", ph);
+    form.append("password", pw);
+  } else {
+    const u = document.getElementById("username").value.trim();
+    const pw = document.getElementById("password").value;
+    if (!u || !pw) { alert("Fyll inn brukernavn og passord"); return; }
+    form.append("username", u);
+    form.append("password", pw);
+  }
+
+  const res = await fetch(API+"/login", { method:"POST", body: form });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    alert(err.detail || "Innlogging feilet");
+    return;
+  }
+  const data = await res.json();
+  localStorage.setItem("token", data.access_token);
+  document.getElementById("logoutBtn").style.display = "";
+  fetchItems();
+}
+
+async function register(mode){
+  const form = new FormData();
+  const sellerType = (document.getElementById("sellerType")?.value || "privat").toLowerCase();
+  const companyName = document.getElementById("companyName")?.value || "";
+  if (mode === "mobile") {
+    const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
+    const pw = document.getElementById("phonePassword").value;
+    if (!ph || !pw) { alert("Fyll inn mobilnummer og passord"); return; }
+    form.append("phone", ph);
+    form.append("password", pw);
+  } else {
+    const u = document.getElementById("username").value.trim();
+    const pw = document.getElementById("password").value;
+    if (!u || !pw) { alert("Fyll inn brukernavn og passord"); return; }
+    form.append("username", u);
+    form.append("password", pw);
+  }
+
+  form.append("seller_type", sellerType);
+  form.append("company_name", companyName);
+
+  const res = await fetch(API+"/register", { method:"POST", body: form });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    alert(err.detail || "Registrering feilet");
+    return;
+  }
+  alert("Bruker opprettet! Du kan nå logge inn.");
+}
+
+async function loginWithVipps() {
+  const statusEl = document.getElementById("vippsStatus");
+  statusEl.style.display = "none";
+  try {
+    const state = Math.random().toString(36).substring(2);
+    localStorage.setItem("vipps_state", state);
+    const res = await fetch(`${API}/auth/vipps/url?state=${state}`);
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      statusEl.textContent = err.detail || "Vipps er ikke konfigurert ennå.";
+      statusEl.style.display = "block";
+      return;
+    }
+    const data = await res.json();
+    window.location.href = data.url;
+  } catch(e) {
+    statusEl.textContent = "Kunne ikke koble til Vipps.";
+    statusEl.style.display = "block";
+  }
+}
+
+function logout(){
+localStorage.removeItem("token");
+document.getElementById("logoutBtn").style.display = "none";
+location.reload();
+}
+
+// Handle Vipps callback token in URL params
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  const vippsError = params.get("vipps_error");
+  if (token) {
+    localStorage.setItem("token", token);
+    window.history.replaceState({}, "", window.location.pathname);
+  }
+  if (vippsError) {
+    setTimeout(() => {
+      const el = document.getElementById("vippsStatus");
+      if (el) { el.textContent = "Vipps-innlogging feilet. Prøv igjen."; el.style.display = "block"; }
+    }, 300);
+    window.history.replaceState({}, "", window.location.pathname);
+  }
+})();
+
+async function addItem(){
+const token=localStorage.getItem("token");
+if (!token) {
+  showPublishStatus("Logg inn for a publisere annonse.", true);
+  return;
+}
+
+const selectedCategory = category.value;
+const modeValue = document.getElementById("listingMode").value;
+if ((selectedCategory || "").toLowerCase().startsWith("bolig") && !modeValue) {
+  showPublishStatus("Velg boligtype: salgsannonse eller leieannonse.", true);
+  return;
+}
+
+const form=new FormData();
+form.append("title",title.value);
+form.append("description",desc.value);
+form.append("price",price.value);
+form.append("city",city.value);
+form.append("category",selectedCategory);
+form.append("listing_mode", modeValue);
+form.append("boost", document.getElementById("boostToggle").checked ? "true" : "false");
+form.append("payment_provider", document.getElementById("paymentProvider").value);
+
+const imageInput = document.getElementById("image");
+if (imageInput.files && imageInput.files.length > 0) {
+	form.append("image", imageInput.files[0]);
+}
+
+const res = await fetch(API+"/listings",{
+method:"POST",
+headers:{"Authorization":"Bearer "+token},
+body:form
+});
+
+const data = await res.json().catch(()=>({}));
+if (!res.ok) {
+  showPublishStatus(data.detail || "Kunne ikke publisere annonsen.", true);
+  return;
+}
+
+if (data.payment_required) {
+  latestPendingOrderId = data.payment_order_id;
+  const fee = typeof data.fee_nok === "number" ? data.fee_nok : "?";
+  showPublishStatus(`Annonse opprettet som venter pa betaling. Avgift: ${fee} NOK. Bekreft betaling for a aktivere annonsen.`, false, true);
+} else {
+  latestPendingOrderId = null;
+  showPublishStatus("Annonse publisert og aktiv.");
+}
+
+fetchItems();
+}
+
+async function confirmLatestPayment(){
+  if (!latestPendingOrderId) {
+    showPublishStatus("Ingen ventende betaling funnet.", true);
+    return;
+  }
+  const token = localStorage.getItem("token");
+  if (!token) {
+    showPublishStatus("Logg inn for a bekrefte betaling.", true);
+    return;
+  }
+
+  const form = new FormData();
+  form.append("provider_reference", "manual_ui_confirmation");
+
+  const res = await fetch(API + `/payments/orders/${latestPendingOrderId}/confirm`, {
+    method: "POST",
+    headers: {"Authorization": "Bearer " + token},
+    body: form
+  });
+
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) {
+    showPublishStatus(data.detail || "Kunne ikke bekrefte betaling.", true);
+    return;
+  }
+
+  showPublishStatus("Betaling bekreftet. Annonsen er aktiv.");
+  latestPendingOrderId = null;
+  fetchItems();
+}
+
+async function contactSeller(itemId, titleText){
+const token = localStorage.getItem("token");
+if (!token) {
+alert("Logg inn for a kontakte selger.");
+return;
+}
+
+const text = prompt(`Skriv melding til selger for: ${titleText}`);
+if (!text || !text.trim()) {
+return;
+}
+
+const form = new FormData();
+form.append("item_id", itemId);
+form.append("message", text.trim());
+
+const res = await fetch(API + "/contact-seller", {
+method: "POST",
+headers: {"Authorization": "Bearer " + token},
+body: form
+});
+
+if (!res.ok) {
+const err = await res.json();
+alert(err.detail || "Kunne ikke sende melding");
+return;
+}
+
+alert("Melding sendt til selger");
+}
+
+async function prepareVippsPayment(itemId){
+const token = localStorage.getItem("token");
+if (!token) {
+alert("Logg inn for a starte betaling.");
+return;
+}
+
+const form = new FormData();
+form.append("item_id", itemId);
+
+const res = await fetch(API + "/payments/vipps/create-order", {
+method: "POST",
+headers: {"Authorization": "Bearer " + token},
+body: form
+});
+
+const data = await res.json();
+if (!res.ok) {
+alert(data.detail || "Vipps-feil");
+return;
+}
+
+alert(`Vipps-ordre klar. Order ID: ${data.order_id}. ${data.next_step}`);
+}
+
+async function prepareStripePayment(itemId){
+const token = localStorage.getItem("token");
+if (!token) {
+alert("Logg inn for a starte betaling.");
+return;
+}
+
+const form = new FormData();
+form.append("item_id", itemId);
+
+const res = await fetch(API + "/payments/stripe/create-checkout-session", {
+method: "POST",
+headers: {"Authorization": "Bearer " + token},
+body: form
+});
+
+const data = await res.json();
+if (!res.ok) {
+alert(data.detail || "Stripe-feil");
+return;
+}
+
+alert(`Stripe-ordre klar. Order ID: ${data.order_id}. ${data.next_step}`);
+}
+
+async function runHighLogicAssistant(){
+  const input = document.getElementById("aiPrompt");
+  const output = document.getElementById("aiOutput");
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Show user message
+  output.innerHTML += `<div class="ai-msg user"><span>${message.replace(/</g,"&lt;")}</span></div>`;
+  input.value = "";
+  output.scrollTop = output.scrollHeight;
+
+  // Thinking indicator
+  const thinkId = "think_" + Date.now();
+  output.innerHTML += `<div class="ai-msg bot" id="${thinkId}"><span>...</span></div>`;
+  output.scrollTop = output.scrollHeight;
+
+  try {
+    const form = new FormData();
+    form.append("message", message);
+    const res = await fetch(API + "/ai/assist", { method: "POST", body: form });
+    const data = await res.json();
+    const reply = res.ok ? (data.reply || "Ingen svar.") : (data.detail || "Feil fra server.");
+    document.getElementById(thinkId).innerHTML = `<span>${reply.replace(/\n/g,"<br>").replace(/</g,"&lt;").replace(/&lt;br>/g,"<br>")}</span>`;
+  } catch(e) {
+    document.getElementById(thinkId).innerHTML = "<span>Kunne ikke koble til assistenten.</span>";
+  }
+  output.scrollTop = output.scrollHeight;
+}
+
+window.onload=()=>{
+setLang("no");
+const qCategory = new URLSearchParams(window.location.search).get("category");
+if (qCategory && categoryItems.some(c => c.key.toLowerCase() === qCategory.toLowerCase())) {
+  const match = categoryItems.find(c => c.key.toLowerCase() === qCategory.toLowerCase());
+  activeCategory = match ? match.key : "ALL";
+}
+renderCategoryButtons();
+renderPricingPreview();
+fetchItems();
+if (localStorage.getItem("token")) {
+  document.getElementById("logoutBtn").style.display = "";
+}
+
+const priceEl = document.getElementById("price");
+const categoryEl = document.getElementById("category");
+const modeEl = document.getElementById("listingMode");
+if (priceEl) priceEl.addEventListener("input", renderPricingPreview);
+if (categoryEl) categoryEl.addEventListener("change", renderPricingPreview);
+if (modeEl) modeEl.addEventListener("change", renderPricingPreview);
+
+const flowPriceEl = document.getElementById("flowPrice");
+const flowCategoryEl = document.getElementById("flowCategory");
+const flowModeEl = document.getElementById("flowListingMode");
+if (flowPriceEl) flowPriceEl.addEventListener("input", renderFlowPricingPreview);
+if (flowCategoryEl) flowCategoryEl.addEventListener("change", renderFlowPricingPreview);
+if (flowModeEl) flowModeEl.addEventListener("change", renderFlowPricingPreview);
+}
+</script>
+
+</body>
+</html>
