@@ -516,6 +516,8 @@ border-radius: 14px;
 padding: 14px;
 margin-bottom: 14px;
 box-shadow: 0 8px 24px rgba(16, 32, 57, 0.06);
+position: relative;
+z-index: 2;
 }
 
 .panel h2 {
@@ -631,6 +633,13 @@ color: #0d274f;
 border: 1px solid #c7d5ef;
 }
 
+.auth-pane button,
+.auth-tabs button {
+position: relative;
+z-index: 3;
+pointer-events: auto;
+}
+
 @keyframes fadeIn {
 from { opacity: 0; transform: translateY(4px); }
 to { opacity: 1; transform: translateY(0); }
@@ -725,6 +734,7 @@ font-size: 30px;
   <button onclick="login('username')" id="loginBtn">Logg inn</button>
   <button onclick="register('username')" id="registerBtn" class="ghost">Registrer ny bruker</button>
     <button type="button" class="vipps-secondary" onclick="continueWithVipps()">Fortsett med Vipps</button>
+  <div id="loginError" style="display:none;margin-top:8px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:600"></div>
 </div>
 
 <!-- Mobilnummer-pane -->
@@ -871,9 +881,67 @@ font-size: 30px;
 // Set window.SELGO_API_BASE in a deployment config or environment to override.
 // For local dev: http://127.0.0.1:8000
 // For production: https://your-backend.onrender.com
-const API = (typeof window.SELGO_API_BASE !== "undefined" && window.SELGO_API_BASE)
-  ? window.SELGO_API_BASE
-  : "http://127.0.0.1:8000";
+const API = (() => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const apiFromQuery = (params.get("api") || "").trim();
+    if (apiFromQuery) {
+      localStorage.setItem("SELGO_API_BASE", apiFromQuery.replace(/\/$/, ""));
+    }
+  } catch (e) {}
+
+  if (typeof window.SELGO_API_BASE !== "undefined" && window.SELGO_API_BASE) {
+    return window.SELGO_API_BASE;
+  }
+
+  const apiFromStorage = (localStorage.getItem("SELGO_API_BASE") || "").trim();
+  if (apiFromStorage) {
+    return apiFromStorage.replace(/\/$/, "");
+  }
+
+  const host = window.location.hostname;
+  const isLocal = window.location.protocol === "file:" || host === "127.0.0.1" || host === "localhost";
+  return isLocal ? "http://127.0.0.1:8000" : window.location.origin;
+})();
+
+function saveApiBase(nextApiBase) {
+  const trimmed = (nextApiBase || "").trim().replace(/\/$/, "");
+  if (!trimmed) return false;
+  localStorage.setItem("SELGO_API_BASE", trimmed);
+  return true;
+}
+
+function maybePromptApiSetup(reasonText) {
+  const current = API;
+  const msg = `${reasonText}\n\nAktiv API-base nå:\n${current}\n\nTrykk OK for å sette backend-URL manuelt.`;
+  const wantsSetup = confirm(msg);
+  if (!wantsSetup) return;
+
+  const entered = prompt("Lim inn backend URL (f.eks. https://din-backend.onrender.com):", current || "");
+  if (!entered) return;
+  if (!saveApiBase(entered)) return;
+  alert("API-base lagret. Siden lastes på nytt.");
+  location.reload();
+}
+
+async function readErrorPayload(res) {
+  const contentType = (res.headers.get("content-type") || "").toLowerCase();
+  if (contentType.includes("application/json")) {
+    return await res.json().catch(() => ({}));
+  }
+  const txt = await res.text().catch(() => "");
+  return { detail: txt ? txt.slice(0, 180) : "" };
+}
+
+function shouldSuggestApiSetup(res, payload) {
+  if (!res) return true;
+  const contentType = (res.headers.get("content-type") || "").toLowerCase();
+  if (res.status === 404 || res.status === 405) return true;
+  if (contentType.includes("text/html")) return true;
+  const detail = (payload && payload.detail ? String(payload.detail) : "").toLowerCase();
+  if (detail.includes("cannot") || detail.includes("not found") || detail.includes("html")) return true;
+  return false;
+}
 // --- END CONFIG ---
 
 let lang = "no";
@@ -1281,53 +1349,81 @@ function switchAuthTab(name, el) {
 }
 
 async function fetchItems(){
+try {
 const res=await fetch(API+"/listings");
+if (!res.ok) {
+  return;
+}
 allItems=await res.json();
 renderItems();
+} catch (e) {
+  console.error("Kunne ikke hente annonser", e);
+}
+}
+
+function showAuthMsg(msg, isError) {
+  const el = document.getElementById("loginError");
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = "block";
+  el.style.color = isError ? "#7a1f1f" : "#1a5c2a";
+  el.style.background = isError ? "#fff3f3" : "#f0fff4";
+  el.style.border = isError ? "1px solid #efc0c0" : "1px solid #a8dfb8";
 }
 
 async function login(mode){
+  try {
   const form = new FormData();
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
-    if (!ph || !pw) { alert("Fyll inn mobilnummer og passord"); return; }
+    if (!ph || !pw) { showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
     form.append("phone", ph);
     form.append("password", pw);
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
-    if (!u || !pw) { alert("Fyll inn brukernavn og passord"); return; }
+    if (!u || !pw) { showAuthMsg("Fyll inn brukernavn og passord", true); return; }
     form.append("username", u);
     form.append("password", pw);
   }
 
   const res = await fetch(API+"/login", { method:"POST", body: form });
   if (!res.ok) {
-    const err = await res.json().catch(()=>({}));
-    alert(err.detail || "Innlogging feilet");
+    const err = await readErrorPayload(res);
+    showAuthMsg(`Innlogging feilet (${res.status}). ${err.detail || ""}`.trim(), true);
+    if (shouldSuggestApiSetup(res, err)) {
+      maybePromptApiSetup("Innlogging traff sannsynligvis feil API-endepunkt.");
+    }
     return;
   }
   const data = await res.json();
   localStorage.setItem("token", data.access_token);
   document.getElementById("logoutBtn").style.display = "";
+  const errEl = document.getElementById("loginError");
+  if (errEl) errEl.style.display = "none";
   fetchItems();
+  } catch (e) {
+    showAuthMsg("Kunne ikke koble til serveren.", true);
+    maybePromptApiSetup("Nettverksfeil ved innlogging.");
+  }
 }
 
 async function register(mode){
+  try {
   const form = new FormData();
   const sellerType = (document.getElementById("sellerType")?.value || "privat").toLowerCase();
   const companyName = document.getElementById("companyName")?.value || "";
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
-    if (!ph || !pw) { alert("Fyll inn mobilnummer og passord"); return; }
+    if (!ph || !pw) { showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
     form.append("phone", ph);
     form.append("password", pw);
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
-    if (!u || !pw) { alert("Fyll inn brukernavn og passord"); return; }
+    if (!u || !pw) { showAuthMsg("Fyll inn brukernavn og passord", true); return; }
     form.append("username", u);
     form.append("password", pw);
   }
@@ -1337,11 +1433,18 @@ async function register(mode){
 
   const res = await fetch(API+"/register", { method:"POST", body: form });
   if (!res.ok) {
-    const err = await res.json().catch(()=>({}));
-    alert(err.detail || "Registrering feilet");
+    const err = await readErrorPayload(res);
+    showAuthMsg(`Registrering feilet (${res.status}). ${err.detail || ""}`.trim(), true);
+    if (shouldSuggestApiSetup(res, err)) {
+      maybePromptApiSetup("Registrering traff sannsynligvis feil API-endepunkt.");
+    }
     return;
   }
-  alert("Bruker opprettet! Du kan nå logge inn.");
+  showAuthMsg("Bruker opprettet! Du kan nå logge inn.", false);
+  } catch (e) {
+    showAuthMsg("Kunne ikke koble til serveren.", true);
+    maybePromptApiSetup("Nettverksfeil ved registrering.");
+  }
 }
 
 async function loginWithVipps() {
@@ -1663,6 +1766,19 @@ const flowModeEl = document.getElementById("flowListingMode");
 if (flowPriceEl) flowPriceEl.addEventListener("input", renderFlowPricingPreview);
 if (flowCategoryEl) flowCategoryEl.addEventListener("change", renderFlowPricingPreview);
 if (flowModeEl) flowModeEl.addEventListener("change", renderFlowPricingPreview);
+
+const loginBtn = document.getElementById("loginBtn");
+const registerBtn = document.getElementById("registerBtn");
+if (loginBtn) loginBtn.addEventListener("click", () => login("username"));
+if (registerBtn) registerBtn.addEventListener("click", () => register("username"));
+
+const mobileLoginBtn = document.querySelector("#pane-mobile button[onclick*=\"login('mobile')\"]");
+const mobileRegisterBtn = document.querySelector("#pane-mobile button[onclick*=\"register('mobile')\"]");
+if (mobileLoginBtn) mobileLoginBtn.addEventListener("click", () => login("mobile"));
+if (mobileRegisterBtn) mobileRegisterBtn.addEventListener("click", () => register("mobile"));
+
+const vippsLoginBtn = document.querySelector("#pane-vipps .vipps-btn");
+if (vippsLoginBtn) vippsLoginBtn.addEventListener("click", loginWithVipps);
 updatePaymentActionButtons();
 }
 </script>
