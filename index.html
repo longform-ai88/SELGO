@@ -767,14 +767,15 @@ font-size: 30px;
 <input id="price" type="number" min="0" step="1" placeholder="Pris (NOK)">
 <input id="city" placeholder="Sted/By">
 <select id="category" class="full">
-<option value="Bil">Bil - Ny, Brukt, Leiebil, Bobil, Russ Buss, osv.</option>
-<option value="Motorsykkel">Motorsykkel - Ny, Brukt</option>
-<option value="Bolig">Bolig - Kjop, Salg, Leie Bolig/Leilighet</option>
-<option value="Sport">Sport - Ski, Fotball, Handball, Ping Pong, osv.</option>
-<option value="Klær">Klaer - Sko, Dress, osv.</option>
-<option value="Sykkel">Sykkel - Ny, Brukt</option>
+<option value="Bil">Bil</option>
+<option value="Motorsykkel">Motorsykkel</option>
+<option value="Bolig">Bolig</option>
+<option value="Sport">Sport</option>
+<option value="Klær">Klær</option>
+<option value="Sykkel">Sykkel</option>
 <option value="Gis bort">Gis bort</option>
 </select>
+<select id="subcategory" class="full" style="display:none"></select>
 <select id="listingMode" class="full">
 <option value="">Listing-type (brukes for bolig)</option>
 <option value="sale">Bolig til salgs</option>
@@ -827,6 +828,7 @@ font-size: 30px;
         <option value="Sykkel">Sykkel</option>
         <option value="Gis bort">Gis bort</option>
       </select>
+      <select id="flowSubcategory" style="display:none"></select>
       <select id="flowListingMode">
         <option value="">Boligtype (kun for Bolig)</option>
         <option value="sale">Bolig til salgs</option>
@@ -1192,6 +1194,8 @@ function prevListingFlowStep(){
 
 function goToPaymentFromFlow(){
   document.getElementById("category").value = document.getElementById("flowCategory").value;
+  updateSubcategoryOptions();
+  document.getElementById("subcategory").value = document.getElementById("flowSubcategory").value;
   document.getElementById("listingMode").value = document.getElementById("flowListingMode").value;
   document.getElementById("title").value = document.getElementById("flowTitle").value;
   document.getElementById("desc").value = document.getElementById("flowDesc").value;
@@ -1202,6 +1206,51 @@ function goToPaymentFromFlow(){
   closeListingFlow();
   document.getElementById("addTitle").scrollIntoView({behavior: "smooth", block: "start"});
   showPublishStatus("Skjema er utfylt. Klikk Publiser for å fortsette til betaling.", false);
+}
+
+function updateSubcategoryOptions(){
+  const categoryEl = document.getElementById("category");
+  const subEl = document.getElementById("subcategory");
+  if (!categoryEl || !subEl) return;
+
+  const selected = categoryItems.find(c => c.key === categoryEl.value);
+  if (!selected || !selected.subs || selected.subs.length === 0) {
+    subEl.style.display = "none";
+    subEl.innerHTML = "";
+    subEl.value = "";
+    return;
+  }
+
+  subEl.innerHTML = `<option value="">Velg type (${selected.key})</option>` +
+    selected.subs.map(sub => `<option value="${sub}">${sub}</option>`).join("");
+  subEl.style.display = "";
+}
+
+function updateFlowSubcategoryOptions(){
+  const categoryEl = document.getElementById("flowCategory");
+  const subEl = document.getElementById("flowSubcategory");
+  if (!categoryEl || !subEl) return;
+
+  const selected = categoryItems.find(c => c.key === categoryEl.value);
+  if (!selected || !selected.subs || selected.subs.length === 0) {
+    subEl.style.display = "none";
+    subEl.innerHTML = "";
+    subEl.value = "";
+    return;
+  }
+
+  subEl.innerHTML = `<option value="">Velg type (${selected.key})</option>` +
+    selected.subs.map(sub => `<option value="${sub}">${sub}</option>`).join("");
+  subEl.style.display = "";
+}
+
+function getSelectedCategoryValue(){
+  const categoryEl = document.getElementById("category");
+  const subEl = document.getElementById("subcategory");
+  if (!categoryEl) return "";
+  const base = categoryEl.value;
+  const sub = subEl ? (subEl.value || "") : "";
+  return sub ? `${base} - ${sub}` : base;
 }
 
 function navigateToCategoryListings(categoryKey){
@@ -1326,7 +1375,7 @@ async function createListingWithProvider(providerOverride = null){
     return { ok: false, data: { detail: "Mangler innlogging" } };
   }
 
-  const selectedCategory = category.value;
+  const selectedCategory = getSelectedCategoryValue();
   const modeValue = document.getElementById("listingMode").value;
   if ((selectedCategory || "").toLowerCase().startsWith("bolig") && !modeValue) {
     showPublishStatus("Velg boligtype: salgsannonse eller leieannonse.", true);
@@ -1784,14 +1833,14 @@ const priceEl = document.getElementById("price");
 const categoryEl = document.getElementById("category");
 const modeEl = document.getElementById("listingMode");
 if (priceEl) priceEl.addEventListener("input", renderPricingPreview);
-if (categoryEl) categoryEl.addEventListener("change", renderPricingPreview);
+if (categoryEl) categoryEl.addEventListener("change", () => { updateSubcategoryOptions(); renderPricingPreview(); });
 if (modeEl) modeEl.addEventListener("change", renderPricingPreview);
 
 const flowPriceEl = document.getElementById("flowPrice");
 const flowCategoryEl = document.getElementById("flowCategory");
 const flowModeEl = document.getElementById("flowListingMode");
 if (flowPriceEl) flowPriceEl.addEventListener("input", renderFlowPricingPreview);
-if (flowCategoryEl) flowCategoryEl.addEventListener("change", renderFlowPricingPreview);
+if (flowCategoryEl) flowCategoryEl.addEventListener("change", () => { updateFlowSubcategoryOptions(); renderFlowPricingPreview(); });
 if (flowModeEl) flowModeEl.addEventListener("change", renderFlowPricingPreview);
 
 const loginBtn = document.getElementById("loginBtn");
@@ -1806,6 +1855,8 @@ if (mobileRegisterBtn) mobileRegisterBtn.addEventListener("click", () => registe
 
 const vippsLoginBtn = document.querySelector("#pane-vipps .vipps-btn");
 if (vippsLoginBtn) vippsLoginBtn.addEventListener("click", loginWithVipps);
+updateSubcategoryOptions();
+updateFlowSubcategoryOptions();
 updatePaymentActionButtons();
 }
 </script>
