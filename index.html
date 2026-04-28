@@ -895,12 +895,18 @@ const API = (() => {
   }
 
   const apiFromStorage = (localStorage.getItem("SELGO_API_BASE") || "").trim();
-  if (apiFromStorage) {
-    return apiFromStorage.replace(/\/$/, "");
-  }
-
   const host = window.location.hostname;
   const isLocal = window.location.protocol === "file:" || host === "127.0.0.1" || host === "localhost";
+  if (apiFromStorage) {
+    // Ignore localhost overrides when running on production
+    const storedIsLocal = apiFromStorage.includes("127.0.0.1") || apiFromStorage.includes("localhost");
+    if (!storedIsLocal || isLocal) {
+      return apiFromStorage.replace(/\/$/, "");
+    }
+    // Stale localhost value in production — clear it
+    localStorage.removeItem("SELGO_API_BASE");
+  }
+
   return isLocal ? "http://127.0.0.1:8000" : window.location.origin;
 })();
 
