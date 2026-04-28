@@ -923,7 +923,7 @@ function maybePromptApiSetup(reasonText) {
   const wantsSetup = confirm(msg);
   if (!wantsSetup) return;
 
-  const entered = prompt("Lim inn backend URL (f.eks. ):", current || "https://sego.onrender.com");
+  const entered = prompt("Lim inn backend URL (f.eks. ):", current || "https://sego-qmo1.onrender.com");
   if (!entered) return;
   if (!saveApiBase(entered)) return;
   alert("API-base lagret. Siden lastes på nytt.");
@@ -933,7 +933,18 @@ function maybePromptApiSetup(reasonText) {
 async function readErrorPayload(res) {
   const contentType = (res.headers.get("content-type") || "").toLowerCase();
   if (contentType.includes("application/json")) {
-    return await res.json().catch(() => ({}));
+    const payload = await res.json().catch(() => ({}));
+    const detail = payload && payload.detail;
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((d) => (d && d.msg ? String(d.msg) : ""))
+        .filter(Boolean);
+      return { ...payload, detail: messages.join("; ") || "Ugyldig forespørsel" };
+    }
+    if (detail && typeof detail === "object") {
+      return { ...payload, detail: detail.msg ? String(detail.msg) : JSON.stringify(detail) };
+    }
+    return { ...payload, detail: typeof detail === "string" ? detail : "" };
   }
   const txt = await res.text().catch(() => "");
   return { detail: txt ? txt.slice(0, 180) : "" };
@@ -1382,26 +1393,24 @@ async function login(mode){
   const origText = loginBtn ? loginBtn.textContent : "";
   if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = "Laster..."; }
   try {
-  let email = "";
-  let password = "";
+  const form = new FormData();
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
     if (!ph || !pw) { if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
-    email = ph;
-    password = pw;
+    form.append("phone", ph);
+    form.append("password", pw);
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
     if (!u || !pw) { if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
-    email = u;
-    password = pw;
+    form.append("username", u);
+    form.append("password", pw);
   }
 
   const res = await fetch("https://sego-qmo1.onrender.com/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
+    body: form
   });
   if (!res.ok) {
     const err = await readErrorPayload(res);
@@ -1427,28 +1436,29 @@ async function register(mode){
   const origText = registerBtn ? registerBtn.textContent : "";
   if (registerBtn) { registerBtn.disabled = true; registerBtn.textContent = "Laster..."; }
   try {
-  let email = "";
-  let password = "";
+  const form = new FormData();
   const sellerType = (document.getElementById("sellerType")?.value || "privat").toLowerCase();
   const companyName = document.getElementById("companyName")?.value || "";
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
     if (!ph || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
-    email = ph;
-    password = pw;
+    form.append("phone", ph);
+    form.append("password", pw);
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
     if (!u || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
-    email = u;
-    password = pw;
+    form.append("username", u);
+    form.append("password", pw);
   }
+
+  form.append("seller_type", sellerType);
+  form.append("company_name", companyName);
 
   const res = await fetch("https://sego-qmo1.onrender.com/register", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, seller_type: sellerType, company_name: companyName })
+    body: form
   });
   if (!res.ok) {
     const err = await readErrorPayload(res);
