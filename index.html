@@ -1457,7 +1457,7 @@ async function login(mode){
     form.append("password", pw);
   }
 
-  const res = await fetch("https://sego-qmo1.onrender.com/login", {
+  const res = await fetch(API + "/login", {
     method: "POST",
     body: form
   });
@@ -1505,7 +1505,7 @@ async function register(mode){
   form.append("seller_type", sellerType);
   form.append("company_name", companyName);
 
-  const res = await fetch("https://sego-qmo1.onrender.com/register", {
+  const res = await fetch(API + "/register", {
     method: "POST",
     body: form
   });
