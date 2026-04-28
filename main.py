@@ -195,7 +195,7 @@ def get_user(token: str = Depends(oauth), db: Session = Depends(get_db)):
 
 @app.get("/")
 def root():
-    return {"msg": "SELGO API running"}
+    return FileResponse("index.html")
 
 
 @app.get("/app", response_class=FileResponse)
