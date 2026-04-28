@@ -1404,8 +1404,7 @@ async function login(mode){
   if (errEl) errEl.style.display = "none";
   fetchItems();
   } catch (e) {
-    showAuthMsg("Kunne ikke koble til serveren.", true);
-    maybePromptApiSetup("Nettverksfeil ved innlogging.");
+    showAuthMsg("Serveren svarer ikke. Vent 30 sekunder og prøv igjen (gratis server starter opp).", true);
   }
 }
 
@@ -1442,8 +1441,7 @@ async function register(mode){
   }
   showAuthMsg("Bruker opprettet! Du kan nå logge inn.", false);
   } catch (e) {
-    showAuthMsg("Kunne ikke koble til serveren.", true);
-    maybePromptApiSetup("Nettverksfeil ved registrering.");
+    showAuthMsg("Serveren svarer ikke. Vent 30 sekunder og prøv igjen (gratis server starter opp).", true);
   }
 }
 
