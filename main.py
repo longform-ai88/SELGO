@@ -127,17 +127,18 @@ def register(username: str = Form(None), password: str = Form(...), phone: str =
 
 # === LOGIN ===
 @app.post("/login")
-def login(username: str = Form(None), phone: str = Form(None), password: str = Form(...), db: Session = Depends(get_db)):
-    user = None
-    if username:
-        user = db.query(UserDB).filter(UserDB.username == username).first()
-    if not user and phone:
-        user = db.query(UserDB).filter(UserDB.phone == phone).first()
+def login(username: str = Form(...), password: str = Form(...)):
+    user = db.query(UserDB).filter(UserDB.username == username).first()
 
-    if not user or not pwd.verify(password, user.password):
+    if not user:
         raise HTTPException(401, "Feil login")
 
-    return {"access_token": create_token(user.username), "token_type": "bearer"}
+    if not pwd.verify(password, user.password):
+        raise HTTPException(401, "Feil login")
+
+    return {
+        "access_token": user.username
+    }
 
 # === VIPPS ===
 @app.get("/auth/vipps/url")

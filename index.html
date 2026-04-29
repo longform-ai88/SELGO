@@ -1410,6 +1410,23 @@ function showAuthMsg(msg, isError) {
   el.style.border = isError ? "1px solid #efc0c0" : "1px solid #a8dfb8";
 }
 
+function updateAuthUI() {
+  const token = localStorage.getItem("token");
+  const loginBtn = document.getElementById("loginBtn");
+  const registerBtn = document.getElementById("registerBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  if (token) {
+    if (loginBtn) loginBtn.style.display = "none";
+    if (registerBtn) registerBtn.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "";
+  } else {
+    if (loginBtn) loginBtn.style.display = "";
+    if (registerBtn) registerBtn.style.display = "";
+    if (logoutBtn) logoutBtn.style.display = "none";
+  }
+}
+
 async function login(mode){
   const loginBtn = document.getElementById("loginBtn");
   const origText = loginBtn ? loginBtn.textContent : "";
@@ -1442,6 +1459,7 @@ async function login(mode){
   }
   const data = await res.json();
   localStorage.setItem("token", data.access_token);
+  updateAuthUI();
   // 👇 LEGG DETTE HER
   if (loginBtn) {
     loginBtn.disabled = false;
@@ -1527,7 +1545,7 @@ async function loginWithVipps() {
 
 function logout(){
 localStorage.removeItem("token");
-document.getElementById("logoutBtn").style.display = "none";
+updateAuthUI();
 location.reload();
 }
 
@@ -1798,6 +1816,7 @@ async function runHighLogicAssistant(){
 window.onload=()=>{
 setLang("no");
 handleStripeReturn();
+updateAuthUI();
 const qCategory = new URLSearchParams(window.location.search).get("category");
 if (qCategory && categoryItems.some(c => c.key.toLowerCase() === qCategory.toLowerCase())) {
   const match = categoryItems.find(c => c.key.toLowerCase() === qCategory.toLowerCase());
@@ -1806,9 +1825,6 @@ if (qCategory && categoryItems.some(c => c.key.toLowerCase() === qCategory.toLow
 renderCategoryButtons();
 renderPricingPreview();
 fetchItems();
-if (localStorage.getItem("token")) {
-  document.getElementById("logoutBtn").style.display = "";
-}
 
 const priceEl = document.getElementById("price");
 const categoryEl = document.getElementById("category");
