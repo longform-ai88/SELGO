@@ -13,6 +13,7 @@ from uuid import uuid4
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timedelta
+from typing import List, Optional
 import os
 import urllib.parse
 import urllib.request
@@ -208,6 +209,7 @@ async def create_listing(
     address: str = Form(None),
     seller_phone: str = Form(None),
     image: UploadFile = File(None),
+    images: Optional[List[UploadFile]] = File(None),
     token: str = Depends(oauth),
     db: Session = Depends(get_db)
 ):
@@ -216,14 +218,23 @@ async def create_listing(
     if not user:
         raise HTTPException(401, "Ikke innlogget")
 
-    image_url = None
-    if image and image.filename:
-        ext = Path(image.filename).suffix
+    # Collect all uploaded files (support both single 'image' and multi 'images')
+    all_files = []
+    if images:
+        all_files = [f for f in images if f and f.filename]
+    if not all_files and image and image.filename:
+        all_files = [image]
+
+    image_urls = []
+    for f in all_files:
+        ext = Path(f.filename).suffix
         filename = f"{uuid4().hex}{ext}"
         dest = UPLOAD_DIR / filename
-        content = await image.read()
+        content = await f.read()
         dest.write_bytes(content)
-        image_url = f"uploads/{filename}"
+        image_urls.append(f"uploads/{filename}")
+
+    image_url = json.dumps(image_urls) if image_urls else None
 
     boost_flag = boost.lower() == "true"
     listing_type = listing_mode if listing_mode else "standard"
