@@ -1303,31 +1303,6 @@ function renderCategoryButtons(){
   });
 }
 
-function renderItems(){
-  console.log("RENDER", allItems);
-let filtered = activeCategory === "ALL"
-  ? allItems
-  : allItems.filter(i => (i.category || "").toLowerCase().startsWith(activeCategory.toLowerCase()));
-if (activeSubcat) {
-  filtered = filtered.filter(i => (i.category || "").toLowerCase().includes(activeSubcat.toLowerCase()));
-}
-
-let html="";
-filtered.forEach(i=>{
-	const imageHtml = i.image_url ? `<img src="${API}/${i.image_url}" alt="${i.title}">` : "";
-  const paidInfo = (i.listing_price_paid && i.listing_price_paid > 0) ? `${i.listing_price_paid} NOK` : "0 NOK";
-  const listingType = i.listing_type || "standard";
-  const expiresText = i.expires_at ? new Date(i.expires_at).toLocaleDateString() : "-";
-  const sellerType = (i.seller_type || "privat").toLowerCase();
-  const sellerTypeText = sellerType === "naering" ? "Næring" : "Privat";
-  const sellerPublicId = i.seller_public_id || (sellerType === "naering" ? "NARING-0" : "PRIVAT-0");
-  const sellerCompanyName = i.seller_company_name ? ` (${i.seller_company_name})` : "";
-  html += `<div class="card"><h3>${i.title}</h3><p>${i.price} kr - ${i.location}</p>${imageHtml}<p>${i.description}</p><p>Kategori: ${i.category || "Ukjent"}</p><p><span class="seller-badge">${sellerTypeText}</span>Selger-ID: ${sellerPublicId}${sellerCompanyName}</p><p>Selger: ${i.seller_username || "ukjent"}</p><p>Annonsetype: ${listingType}${i.is_featured ? " (Boost)" : ""}</p><p>Avgift betalt: ${paidInfo}</p><p>Utloper: ${expiresText}</p><div class="card-actions"><button type="button" class="ghost" onclick="contactSeller(${i.id}, '${i.title.replace(/'/g, "&#39;")}')">${t[lang].contactSeller}</button></div></div>`;
-});
-
-document.getElementById("items").innerHTML=html;
-}
-
 function setLang(l){
 lang=l;
 document.getElementById("welcome").innerText=t[l].welcome;
@@ -1543,19 +1518,11 @@ async function login(mode){
   const data = await res.json();
   localStorage.setItem("token", data.access_token);
   updateAuthUI();
-  // 👇 LEGG DETTE HER
   if (loginBtn) {
     loginBtn.disabled = false;
     loginBtn.textContent = "Logget inn";
   }
-
-  document.getElementById("logoutBtn").style.display = "";
-
-  // reload så UI oppdateres riktig
   location.reload();
-  const errEl = document.getElementById("loginError");
-  if (errEl) errEl.style.display = "none";
-  fetchItems();
   } catch (e) {
     if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
     showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
@@ -1900,9 +1867,6 @@ async function runHighLogicAssistant(){
 
 window.onload=()=>{
   updateAuthUI();
-
-  fetchItems(); // Legg til denne linjen for å hente og vise annonser ved innlastning
-  console.log("FETCH KJØRT");
 setLang("no");
 handleStripeReturn();
 const qCategory = new URLSearchParams(window.location.search).get("category");
@@ -1929,28 +1893,9 @@ if (flowCategoryEl) flowCategoryEl.addEventListener("change", () => { updateFlow
 if (flowModeEl) flowModeEl.addEventListener("change", renderFlowPricingPreview);
 
 const loginBtn = document.getElementById("loginBtn");
-const registerBtn = document.getElementById("registerBtn");
 if (loginBtn) {
-    loginBtn.addEventListener("click", () => {
-        const token = localStorage.getItem("token");
-
-        if (token) {
-            // 🔥 logout
-            localStorage.removeItem("token");
-            location.reload();
-        } else {
-            // 🔥 login
-            login("username");
-        }
-    });
+  loginBtn.addEventListener("click", () => login("username"));
 }
-if (registerBtn) registerBtn.addEventListener("click", () => register("username"));
-
-// 🔥 KUN denne igjen
-updateAuthUI();
-
-const vippsLoginBtn = document.querySelector("#pane-vipps .vipps-btn");
-if (vippsLoginBtn) vippsLoginBtn.addEventListener("click", loginWithVipps);
 updateSubcategoryOptions();
 updateFlowSubcategoryOptions();
 updatePaymentActionButtons();
