@@ -1291,6 +1291,7 @@ function renderCategoryButtons(){
 }
 
 function renderItems(){
+  console.log("RENDER", allItems);
 let filtered = activeCategory === "ALL"
   ? allItems
   : allItems.filter(i => (i.category || "").toLowerCase().startsWith(activeCategory.toLowerCase()));
