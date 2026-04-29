@@ -170,9 +170,17 @@ def vipps_callback():
 # === LISTINGS (MINIMAL SAFE) ===
 @app.get("/listings")
 def listings(db: Session = Depends(get_db)):
-    items = db.query(ItemDB).all()
+    now = datetime.utcnow()
+    items = (
+        db.query(ItemDB)
+        .filter((ItemDB.status == "active") | (ItemDB.status.is_(None)))
+        .order_by(ItemDB.id.desc())
+        .all()
+    )
     result = []
     for item in items:
+        if item.expires_at and item.expires_at < now:
+            continue
         owner = db.query(ListingOwnerDB).filter(ListingOwnerDB.item_id == item.id).first()
         seller_username = owner.username if owner else None
         seller_user = db.query(UserDB).filter(UserDB.username == seller_username).first() if seller_username else None
