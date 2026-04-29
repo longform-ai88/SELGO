@@ -1840,11 +1840,11 @@ async function runHighLogicAssistant(){
 
 window.onload=()=>{
   updateAuthUI();
-  // eksisterende kode...
+
   fetchItems(); // Legg til denne linjen for å hente og vise annonser ved innlastning
+  console.log("FETCH KJØRT");
 setLang("no");
 handleStripeReturn();
-updateAuthUI();
 const qCategory = new URLSearchParams(window.location.search).get("category");
 if (qCategory && categoryItems.some(c => c.key.toLowerCase() === qCategory.toLowerCase())) {
   const match = categoryItems.find(c => c.key.toLowerCase() === qCategory.toLowerCase());
