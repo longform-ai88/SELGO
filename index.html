@@ -731,7 +731,7 @@ font-size: 30px;
     <option value="naering">Selgertype: Næring</option>
   </select>
   <input id="companyName" placeholder="Firmanavn (kun for næring)">
-  <button onclick="login('username')" id="loginBtn">Logg inn</button>
+  <button id="loginBtn">Logg inn</button>
   <button onclick="register('username')" id="registerBtn" class="ghost">Registrer ny bruker</button>
     <button type="button" class="vipps-secondary" onclick="continueWithVipps()">Fortsett med Vipps</button>
   <div id="loginError" style="display:none;margin-top:8px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:600"></div>
@@ -1411,20 +1411,21 @@ function showAuthMsg(msg, isError) {
 }
 
 function updateAuthUI() {
-  const token = localStorage.getItem("token");
-  const loginBtn = document.getElementById("loginBtn");
-  const registerBtn = document.getElementById("registerBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
+    const token = localStorage.getItem("token");
+    const loginBtn = document.getElementById("loginBtn");
+    const registerBtn = document.getElementById("registerBtn");
 
-  if (token) {
-    if (loginBtn) loginBtn.style.display = "none";
-    if (registerBtn) registerBtn.style.display = "none";
-    if (logoutBtn) logoutBtn.style.display = "";
-  } else {
-    if (loginBtn) loginBtn.style.display = "";
-    if (registerBtn) registerBtn.style.display = "";
-    if (logoutBtn) logoutBtn.style.display = "none";
-  }
+    if (token) {
+        // 🔥 Endre tekst i stedet for å skjule
+        if (loginBtn) loginBtn.textContent = "Logg ut";
+
+        // Skjul register
+        if (registerBtn) registerBtn.style.display = "none";
+
+    } else {
+        if (loginBtn) loginBtn.textContent = "Logg inn";
+        if (registerBtn) registerBtn.style.display = "";
+    }
 }
 
 async function login(mode){
@@ -1842,11 +1843,26 @@ if (flowModeEl) flowModeEl.addEventListener("change", renderFlowPricingPreview);
 
 const loginBtn = document.getElementById("loginBtn");
 const registerBtn = document.getElementById("registerBtn");
-if (loginBtn) loginBtn.addEventListener("click", () => login("username"));
+if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+        const token = localStorage.getItem("token");
+
+        if (token) {
+            // 🔥 logout
+            localStorage.removeItem("token");
+            location.reload();
+        } else {
+            // 🔥 login
+            login("username");
+        }
+    });
+}
 if (registerBtn) registerBtn.addEventListener("click", () => register("username"));
 
 const mobileLoginBtn = document.querySelector("#pane-mobile button[onclick*=\"login('mobile')\"]");
 const mobileRegisterBtn = document.querySelector("#pane-mobile button[onclick*=\"register('mobile')\"]");
+// 🔥 Legg denne linjen her
+updateAuthUI();
 if (mobileLoginBtn) mobileLoginBtn.addEventListener("click", () => login("mobile"));
 if (mobileRegisterBtn) mobileRegisterBtn.addEventListener("click", () => register("mobile"));
 
