@@ -1859,12 +1859,8 @@ if (loginBtn) {
 }
 if (registerBtn) registerBtn.addEventListener("click", () => register("username"));
 
-const mobileLoginBtn = document.getElementById("mobileLoginBtn");
-const mobileRegisterBtn = document.getElementById("mobileRegisterBtn");
-// 🔥 Legg denne linjen her
+// 🔥 KUN denne igjen
 updateAuthUI();
-if (mobileLoginBtn) mobileLoginBtn.addEventListener("click", () => login("mobile"));
-if (mobileRegisterBtn) mobileRegisterBtn.addEventListener("click", () => register("mobile"));
 
 const vippsLoginBtn = document.querySelector("#pane-vipps .vipps-btn");
 if (vippsLoginBtn) vippsLoginBtn.addEventListener("click", loginWithVipps);
