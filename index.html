@@ -883,34 +883,7 @@ font-size: 30px;
 // Set window.SELGO_API_BASE in a deployment config or environment to override.
 // For local dev: http://127.0.0.1:8000
 // For production: https://your-backend.onrender.com
-const API = (() => {
-  const host = window.location.hostname;
-  const isLocal = window.location.protocol === "file:" || host === "127.0.0.1" || host === "localhost";
-
-  // In production, always use the current origin — never trust localStorage overrides
-  if (!isLocal) {
-    localStorage.removeItem("SELGO_API_BASE");
-    return window.location.origin;
-  }
-
-  // Local dev: allow override via ?api= query param or localStorage
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const apiFromQuery = (params.get("api") || "").trim();
-    if (apiFromQuery) {
-      localStorage.setItem("SELGO_API_BASE", apiFromQuery.replace(/\/$/, ""));
-    }
-  } catch (e) {}
-
-  if (typeof window.SELGO_API_BASE !== "undefined" && window.SELGO_API_BASE) {
-    return window.SELGO_API_BASE;
-  }
-
-  const apiFromStorage = (localStorage.getItem("SELGO_API_BASE") || "").trim();
-  if (apiFromStorage) return apiFromStorage.replace(/\/$/, "");
-
-  return "http://127.0.0.1:8000";
-})();
+const API = "https://sego-qmo1.onrender.com";
 
 function saveApiBase(nextApiBase) {
   const trimmed = (nextApiBase || "").trim().replace(/\/$/, "");
