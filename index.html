@@ -713,6 +713,9 @@ font-size: 30px;
 <div class="subcat-row" id="subcatRow" style="display:none"></div>
 </div>
 
+<h2 id="listTitle"></h2>
+<div id="itemsContainer"></div>
+
 <div class="panel">
 <h2 id="loginTitle">Logg inn / Registrer</h2>
 
@@ -797,9 +800,6 @@ font-size: 30px;
 <div id="publishStatus" class="payment-status"></div>
 </div>
 
-<h2 id="listTitle"></h2>
-<div id="itemsContainer"></div>
-
 <div class="legal-links">
   <button type="button" onclick="openLegalModal('tos')">Vilkår for bruk</button>
   <button type="button" onclick="openLegalModal('privacy')">Personvernerklæring</button>
@@ -875,6 +875,16 @@ font-size: 30px;
       <button type="button" class="ghost" onclick="closeLegalModal()">Lukk</button>
     </div>
     <div id="legalContent" style="font-size:14px;line-height:1.55;color:#1a3557"></div>
+  </div>
+</div>
+
+<div id="itemDetailModal" class="legal-modal-backdrop" onclick="if(event.target.id==='itemDetailModal')event.target.style.display='none'">
+  <div class="legal-modal" onclick="event.stopPropagation()">
+    <div class="assistant-top" style="margin-bottom:8px">
+      <h3 style="margin:0">Annonse</h3>
+      <button type="button" class="ghost" onclick="document.getElementById('itemDetailModal').style.display='none'">Lukk</button>
+    </div>
+    <div id="itemDetailBody" style="font-size:14px;line-height:1.55;color:#1a3557"></div>
   </div>
 </div>
 
@@ -1404,23 +1414,60 @@ function renderItems() {
   const container = document.getElementById("itemsContainer");
   if (!container) return;
 
-  container.innerHTML = "";
+  let filtered = activeCategory === "ALL"
+    ? allItems
+    : allItems.filter(i => (i.category || "").toLowerCase().startsWith(activeCategory.toLowerCase()));
+  if (activeSubcat) {
+    filtered = filtered.filter(i => (i.category || "").toLowerCase().includes(activeSubcat.toLowerCase()));
+  }
 
-  allItems.forEach(item => {
-    container.innerHTML += `
-      <div style="
-        background:white;
-        padding:16px;
-        border-radius:12px;
-        margin-bottom:12px;
-        box-shadow:0 4px 12px rgba(0,0,0,0.05);
-      ">
-        <h3>${item.title || "Ingen tittel"}</h3>
-        <p>${item.description || ""}</p>
-        <p><b>${item.price || "0 kr"}</b></p>
-      </div>
-    `;
+  if (filtered.length === 0) {
+    container.innerHTML = '<p style="color:#7a8fa8;font-size:14px;margin:8px 0">Ingen annonser funnet.</p>';
+    return;
+  }
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:18px">';
+  filtered.forEach(item => {
+    const imgHtml = item.image_url
+      ? `<img src="${API}/${item.image_url}" alt="${item.title}" style="width:100%;height:160px;object-fit:cover;border-radius:8px;margin-bottom:8px">`
+      : `<div style="width:100%;height:160px;background:#eef3ff;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:32px">🖼️</div>`;
+    html += `<div class="card" style="cursor:pointer;padding:12px;margin:0" onclick="openItemDetail(${item.id})">
+      ${imgHtml}
+      <h3 style="margin:0 0 4px;font-size:15px">${item.title}</h3>
+      <p style="margin:0;color:#476086;font-size:13px;font-weight:700">${item.price} kr${item.location ? " · " + item.location : ""}</p>
+      <p style="margin:4px 0 0;font-size:12px;color:#7a8fa8">${item.category || ""}</p>
+    </div>`;
   });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function openItemDetail(itemId) {
+  const item = allItems.find(i => i.id === itemId);
+  if (!item) return;
+  const modal = document.getElementById("itemDetailModal");
+  const body = document.getElementById("itemDetailBody");
+  if (!modal || !body) return;
+
+  const imgHtml = item.image_url
+    ? `<img src="${API}/${item.image_url}" alt="${item.title}" style="width:100%;max-height:320px;object-fit:cover;border-radius:10px;margin-bottom:14px">`
+    : "";
+  const sellerType = (item.seller_type || "privat").toLowerCase();
+  const sellerTypeText = sellerType === "naering" ? "Næring" : "Privat";
+  const expiresText = item.expires_at ? new Date(item.expires_at).toLocaleDateString() : "-";
+  const safeTitle = (item.title || "").replace(/'/g, "&#39;");
+
+  body.innerHTML = `
+    ${imgHtml}
+    <h2 style="margin:0 0 6px;font-size:20px">${item.title}</h2>
+    <p style="font-size:22px;font-weight:800;color:#0d274f;margin:0 0 12px">${item.price} kr${item.location ? " · " + item.location : ""}</p>
+    <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#233a5d">${item.description || ""}</p>
+    <p style="font-size:13px;color:#476086;margin:4px 0">Kategori: ${item.category || "Ukjent"}</p>
+    <p style="font-size:13px;color:#476086;margin:4px 0"><span class="seller-badge">${sellerTypeText}</span>Selger: ${item.seller_username || "ukjent"}</p>
+    <p style="font-size:13px;color:#476086;margin:4px 0">Utløper: ${expiresText}</p>
+    <button type="button" style="margin-top:14px" onclick="contactSeller(${item.id}, '${safeTitle}')">${t[lang].contactSeller}</button>
+  `;
+  modal.style.display = "flex";
 }
 
 
