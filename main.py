@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect as sa_inspect
-from database import SessionLocal, engine, Base
+from database import SessionLocal, engine, Base, get_db
 from models import ItemDB, UserDB, ListingOwnerDB, ContactMessageDB, PaymentOrderDB
 from jose import jwt
 from passlib.context import CryptContext
@@ -127,7 +127,11 @@ def register(username: str = Form(None), password: str = Form(...), phone: str =
 
 # === LOGIN ===
 @app.post("/login")
-def login(username: str = Form(...), password: str = Form(...)):
+def login(
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
     user = db.query(UserDB).filter(UserDB.username == username).first()
 
     if not user:
@@ -136,9 +140,7 @@ def login(username: str = Form(...), password: str = Form(...)):
     if not pwd.verify(password, user.password):
         raise HTTPException(401, "Feil login")
 
-    return {
-        "access_token": user.username
-    }
+    return {"access_token": user.username}
 
 # === VIPPS ===
 @app.get("/auth/vipps/url")
