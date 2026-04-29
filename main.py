@@ -52,6 +52,8 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "items", "expires_at", "DATETIME")
     _add_column_if_missing(_conn, "items", "is_featured", "INTEGER DEFAULT 0")
     _add_column_if_missing(_conn, "items", "boost_selected", "INTEGER DEFAULT 0")
+    _add_column_if_missing(_conn, "items", "address", "VARCHAR")
+    _add_column_if_missing(_conn, "items", "seller_phone", "VARCHAR")
 
     _conn.commit()
 
@@ -162,15 +164,79 @@ def vipps_callback():
 # === LISTINGS (MINIMAL SAFE) ===
 @app.get("/listings")
 def listings(db: Session = Depends(get_db)):
-    return db.query(ItemDB).all()
+    items = db.query(ItemDB).all()
+    result = []
+    for item in items:
+        owner = db.query(ListingOwnerDB).filter(ListingOwnerDB.item_id == item.id).first()
+        seller_username = owner.username if owner else None
+        seller_user = db.query(UserDB).filter(UserDB.username == seller_username).first() if seller_username else None
+        d = {c.name: getattr(item, c.name) for c in item.__table__.columns}
+        d["seller_username"] = seller_username
+        d["seller_type"] = seller_user.seller_type if seller_user else "privat"
+        d["seller_company_name"] = seller_user.company_name if seller_user else None
+        result.append(d)
+    return result
 
 # === ADD LISTING ===
 @app.post("/listings")
-def create_listing(title: str = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
-    item = ItemDB(title=title, price=price)
+async def create_listing(
+    title: str = Form(...),
+    price: float = Form(...),
+    description: str = Form(None),
+    city: str = Form(None),
+    category: str = Form(None),
+    listing_mode: str = Form(None),
+    boost: str = Form("false"),
+    payment_provider: str = Form(None),
+    address: str = Form(None),
+    seller_phone: str = Form(None),
+    image: UploadFile = File(None),
+    token: str = Depends(oauth),
+    db: Session = Depends(get_db)
+):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    image_url = None
+    if image and image.filename:
+        ext = Path(image.filename).suffix
+        filename = f"{uuid4().hex}{ext}"
+        dest = UPLOAD_DIR / filename
+        content = await image.read()
+        dest.write_bytes(content)
+        image_url = f"uploads/{filename}"
+
+    boost_flag = boost.lower() == "true"
+    listing_type = listing_mode if listing_mode else "standard"
+    duration = 120 if listing_type == "sale" else 60
+    expires = datetime.utcnow() + timedelta(days=duration)
+
+    item = ItemDB(
+        title=title,
+        description=description,
+        price=price,
+        location=city,
+        category=category,
+        image_url=image_url,
+        listing_type=listing_type,
+        boost_selected=boost_flag,
+        is_featured=boost_flag,
+        listing_duration_days=duration,
+        expires_at=expires,
+        status="active",
+        address=address,
+        seller_phone=seller_phone,
+    )
     db.add(item)
+    db.flush()
+
+    owner = ListingOwnerDB(item_id=item.id, username=user.username)
+    db.add(owner)
     db.commit()
-    return {"msg": "created"}
+    db.refresh(item)
+    return {"msg": "created", "listing_id": item.id, "payment_required": False}
 
 # === TEST ===
 @app.get("/ping")

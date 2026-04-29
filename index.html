@@ -769,6 +769,8 @@ font-size: 30px;
 <textarea id="desc" class="full" placeholder="Skriv en tydelig beskrivelse av varen..."></textarea>
 <input id="price" type="number" min="0" step="1" placeholder="Pris (NOK)">
 <input id="city" placeholder="Sted/By">
+<input id="address" placeholder="Adresse (valgfritt)">
+<input id="sellerPhone" type="tel" placeholder="Mobilnummer (valgfritt)">
 <select id="category" class="full">
 <option value="Bil">Bil</option>
 <option value="Motorsykkel">Motorsykkel</option>
@@ -1371,6 +1373,8 @@ async function createListingWithProvider(providerOverride = null){
   form.append("description", desc.value);
   form.append("price", price.value);
   form.append("city", city.value);
+  form.append("address", document.getElementById("address").value || "");
+  form.append("seller_phone", document.getElementById("sellerPhone").value || "");
   form.append("category", selectedCategory);
   form.append("listing_mode", modeValue);
   form.append("boost", document.getElementById("boostToggle").checked ? "true" : "false");
@@ -1456,6 +1460,8 @@ function openItemDetail(itemId) {
   const sellerTypeText = sellerType === "naering" ? "Næring" : "Privat";
   const expiresText = item.expires_at ? new Date(item.expires_at).toLocaleDateString() : "-";
   const safeTitle = (item.title || "").replace(/'/g, "&#39;");
+  const addressHtml = item.address ? `<p style="font-size:13px;color:#476086;margin:4px 0">📍 ${item.address}</p>` : "";
+  const phoneHtml = item.seller_phone ? `<p style="font-size:13px;color:#476086;margin:4px 0">📞 <a href="tel:${item.seller_phone}" style="color:#0d274f;font-weight:700">${item.seller_phone}</a></p>` : "";
 
   body.innerHTML = `
     ${imgHtml}
@@ -1463,7 +1469,9 @@ function openItemDetail(itemId) {
     <p style="font-size:22px;font-weight:800;color:#0d274f;margin:0 0 12px">${item.price} kr${item.location ? " · " + item.location : ""}</p>
     <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#233a5d">${item.description || ""}</p>
     <p style="font-size:13px;color:#476086;margin:4px 0">Kategori: ${item.category || "Ukjent"}</p>
-    <p style="font-size:13px;color:#476086;margin:4px 0"><span class="seller-badge">${sellerTypeText}</span>Selger: ${item.seller_username || "ukjent"}</p>
+    <p style="font-size:13px;color:#476086;margin:4px 0"><span class="seller-badge">${sellerTypeText}</span>Selger: <strong>${item.seller_username || "ukjent"}</strong></p>
+    ${addressHtml}
+    ${phoneHtml}
     <p style="font-size:13px;color:#476086;margin:4px 0">Utløper: ${expiresText}</p>
     <button type="button" style="margin-top:14px" onclick="contactSeller(${item.id}, '${safeTitle}')">${t[lang].contactSeller}</button>
   `;

@@ -18,6 +18,8 @@ class ItemDB(Base):
     expires_at = Column(DateTime)
     is_featured = Column(Boolean, default=False)
     boost_selected = Column(Boolean, default=False)
+    address = Column(String, nullable=True)
+    seller_phone = Column(String, nullable=True)
 
 class UserDB(Base):
     __tablename__ = "users"
