@@ -149,7 +149,7 @@ def login(
     if not pwd.verify(password, user.password):
         raise HTTPException(401, "Feil login")
 
-    return {"access_token": user.username}
+    return {"access_token": create_token(user.username)}
 
 # === VIPPS ===
 @app.get("/auth/vipps/url")
