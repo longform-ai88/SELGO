@@ -716,8 +716,7 @@ font-size: 30px;
 <h2 id="listTitle"></h2>
 <div id="itemsContainer"></div>
 
-<div class="panel">
-<h2 id="loginTitle">Logg inn / Registrer</h2>
+<div class="panel" id="authPanel">
 
 <div class="auth-tabs">
   <button class="auth-tab active" onclick="switchAuthTab('username',this)">Brukernavn</button>
@@ -1493,17 +1492,19 @@ function updateAuthUI() {
     const token = localStorage.getItem("token");
     const loginBtn = document.getElementById("loginBtn");
     const registerBtn = document.getElementById("registerBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const authPanel = document.getElementById("authPanel");
 
     if (token) {
-        // 🔥 Endre tekst i stedet for å skjule
-        if (loginBtn) loginBtn.textContent = "Logg ut";
-
-        // Skjul register
+        if (authPanel) authPanel.style.display = "none";
+        if (loginBtn) loginBtn.style.display = "none";
         if (registerBtn) registerBtn.style.display = "none";
-
+        if (logoutBtn) logoutBtn.style.display = "";
     } else {
-        if (loginBtn) loginBtn.textContent = "Logg inn";
+        if (authPanel) authPanel.style.display = "";
+        if (loginBtn) loginBtn.style.display = "";
         if (registerBtn) registerBtn.style.display = "";
+        if (logoutBtn) logoutBtn.style.display = "none";
     }
 }
 
