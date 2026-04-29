@@ -1333,6 +1333,31 @@ function showPublishStatus(message, isError=false, includeConfirm=false){
   el.style.display = "block";
 }
 
+function getLoggedInUsername() {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.sub || null;
+  } catch(e) { return null; }
+}
+
+async function deleteListing(itemId) {
+  if (!confirm("Er du sikker på at du vil slette denne annonsen?")) return;
+  const token = localStorage.getItem("token");
+  const res = await fetch(API + "/listings/" + itemId, {
+    method: "DELETE",
+    headers: {"Authorization": "Bearer " + token}
+  });
+  if (res.ok) {
+    document.getElementById("itemDetailModal").style.display = "none";
+    fetchItems();
+  } else {
+    const d = await res.json().catch(()=>({}));
+    alert(d.detail || "Kunne ikke slette annonsen.");
+  }
+}
+
 async function createListingWithProvider(providerOverride = null){
   const token = localStorage.getItem("token");
   if (!token) {
@@ -1441,6 +1466,9 @@ function openItemDetail(itemId) {
   const safeTitle = (item.title || "").replace(/'/g, "&#39;");
   const addressHtml = item.address ? `<p style="font-size:13px;color:#476086;margin:4px 0">📍 ${item.address}</p>` : "";
   const phoneHtml = item.seller_phone ? `<p style="font-size:13px;color:#476086;margin:4px 0">📞 <a href="tel:${item.seller_phone}" style="color:#0d274f;font-weight:700">${item.seller_phone}</a></p>` : "";
+  const loggedInUser = getLoggedInUsername();
+  const isOwner = loggedInUser && loggedInUser === item.seller_username;
+  const deleteBtn = isOwner ? `<button type="button" style="margin-top:14px;background:#c0392b;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700" onclick="deleteListing(${item.id})">Slett annonse</button>` : "";
 
   body.innerHTML = `
     ${imgHtml}
@@ -1453,6 +1481,7 @@ function openItemDetail(itemId) {
     ${phoneHtml}
     <p style="font-size:13px;color:#476086;margin:4px 0">Utløper: ${expiresText}</p>
     <button type="button" style="margin-top:14px" onclick="contactSeller(${item.id}, '${safeTitle}')">${t[lang].contactSeller}</button>
+    ${deleteBtn}
   `;
   modal.style.display = "flex";
 }
@@ -1729,20 +1758,37 @@ async function handleStripeReturn() {
   const params = new URLSearchParams(window.location.search);
   const payment = params.get("payment");
   const orderId = Number(params.get("order_id") || 0);
+  const listingId = Number(params.get("listing_id") || 0);
   const sessionId = params.get("session_id") || "";
 
-  if (payment === "success" && orderId > 0) {
-    latestPendingOrderId = orderId;
-    const result = await confirmPaymentOrderById(orderId, sessionId || "stripe_checkout_success");
-    if (result.ok) {
-      showPublishStatus("Annonse publisert", false);
-      fetchItems();
-    } else {
-      const data = result.data || {};
-      showPublishStatus(data.detail || "Betaling registrert, men bekrefting feilet.", true);
+  if (payment === "success") {
+    const token = localStorage.getItem("token");
+    // Activate listing if listing_id is in URL
+    if (listingId > 0 && token) {
+      const activateRes = await fetch(API + "/listings/" + listingId + "/activate", {
+        method: "POST",
+        headers: {"Authorization": "Bearer " + token}
+      });
+      if (activateRes.ok) {
+        showPublishStatus("Betaling godkjent. Annonsen er nå aktiv!", false);
+        fetchItems();
+      } else {
+        showPublishStatus("Betaling godkjent, men aktivering feilet. Kontakt support.", true);
+      }
+    } else if (orderId > 0) {
+      latestPendingOrderId = orderId;
+      const result = await confirmPaymentOrderById(orderId, sessionId || "stripe_checkout_success");
+      if (result.ok) {
+        showPublishStatus("Annonse publisert", false);
+        fetchItems();
+      } else {
+        const data = result.data || {};
+        showPublishStatus(data.detail || "Betaling registrert, men bekrefting feilet.", true);
+      }
     }
     params.delete("payment");
     params.delete("order_id");
+    params.delete("listing_id");
     params.delete("session_id");
     const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
     window.history.replaceState({}, "", next);
@@ -1753,6 +1799,7 @@ async function handleStripeReturn() {
     showPublishStatus("Betaling avbrutt. Du kan prøve igjen.", true);
     params.delete("payment");
     params.delete("order_id");
+    params.delete("listing_id");
     const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
     window.history.replaceState({}, "", next);
   }

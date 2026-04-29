@@ -227,6 +227,9 @@ async def create_listing(
     duration = 120 if listing_type == "sale" else 60
     expires = datetime.utcnow() + timedelta(days=duration)
 
+    is_stripe = payment_provider == "stripe"
+    listing_status = "pending_payment" if is_stripe else "active"
+
     item = ItemDB(
         title=title,
         description=description,
@@ -239,7 +242,7 @@ async def create_listing(
         is_featured=boost_flag,
         listing_duration_days=duration,
         expires_at=expires,
-        status="active",
+        status=listing_status,
         address=address,
         seller_phone=seller_phone,
     )
@@ -250,7 +253,94 @@ async def create_listing(
     db.add(owner)
     db.commit()
     db.refresh(item)
-    return {"msg": "created", "listing_id": item.id, "payment_required": False}
+    return {"msg": "created", "listing_id": item.id, "payment_required": is_stripe}
+
+# === DELETE LISTING ===
+@app.delete("/listings/{item_id}")
+def delete_listing(item_id: int, token: str = Depends(oauth), db: Session = Depends(get_db)):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    owner = db.query(ListingOwnerDB).filter(
+        ListingOwnerDB.item_id == item_id,
+        ListingOwnerDB.username == user.username
+    ).first()
+    if not owner:
+        raise HTTPException(403, "Du eier ikke denne annonsen")
+
+    item = db.query(ItemDB).filter(ItemDB.id == item_id).first()
+    if not item:
+        raise HTTPException(404, "Annonse ikke funnet")
+
+    item.status = "deleted"
+    db.commit()
+    return {"msg": "deleted"}
+
+# === ACTIVATE LISTING AFTER PAYMENT ===
+@app.post("/listings/{item_id}/activate")
+def activate_listing(item_id: int, token: str = Depends(oauth), db: Session = Depends(get_db)):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    owner = db.query(ListingOwnerDB).filter(
+        ListingOwnerDB.item_id == item_id,
+        ListingOwnerDB.username == user.username
+    ).first()
+    if not owner:
+        raise HTTPException(403, "Du eier ikke denne annonsen")
+
+    item = db.query(ItemDB).filter(ItemDB.id == item_id).first()
+    if not item:
+        raise HTTPException(404, "Annonse ikke funnet")
+
+    item.status = "active"
+    db.commit()
+    return {"msg": "activated"}
+
+# === STRIPE CHECKOUT SESSION ===
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+
+@app.post("/create-checkout-session")
+async def create_checkout_session(
+    item_id: int = Form(...),
+    amount: float = Form(...),
+    title: str = Form(None),
+    token: str = Depends(oauth),
+    db: Session = Depends(get_db)
+):
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(503, "Stripe er ikke konfigurert")
+
+    import stripe as stripe_lib
+    stripe_lib.api_key = STRIPE_SECRET_KEY
+
+    item = db.query(ItemDB).filter(ItemDB.id == item_id).first()
+    if not item:
+        raise HTTPException(404, "Annonse ikke funnet")
+
+    amount_oere = int(round(amount * 100))
+    success_url = f"{APP_BASE_URL}/?payment=success&listing_id={item_id}"
+    cancel_url = f"{APP_BASE_URL}/?payment=cancel"
+
+    session = stripe_lib.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "nok",
+                "product_data": {"name": title or item.title or "Annonsering"},
+                "unit_amount": amount_oere,
+            },
+            "quantity": 1,
+        }],
+        mode="payment",
+        success_url=success_url,
+        cancel_url=cancel_url,
+    )
+    return {"checkout_url": session.url}
 
 # === TEST ===
 @app.get("/ping")
