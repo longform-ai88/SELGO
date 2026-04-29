@@ -798,7 +798,7 @@ font-size: 30px;
 </div>
 
 <h2 id="listTitle"></h2>
-<div id="items"></div>
+<div id="itemsContainer"></div>
 
 <div class="legal-links">
   <button type="button" onclick="openLegalModal('tos')">Vilkår for bruk</button>
@@ -1398,6 +1398,28 @@ renderItems();
 } catch (e) {
   console.error("Kunne ikke hente annonser", e);
 }
+}
+function renderItems() {
+  const container = document.getElementById("itemsContainer");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  allItems.forEach(item => {
+    container.innerHTML += `
+      <div style="
+        background:white;
+        padding:16px;
+        border-radius:12px;
+        margin-bottom:12px;
+        box-shadow:0 4px 12px rgba(0,0,0,0.05);
+      ">
+        <h3>${item.title || "Ingen tittel"}</h3>
+        <p>${item.description || ""}</p>
+        <p><b>${item.price || "0 kr"}</b></p>
+      </div>
+    `;
+  });
 }
 
 function showAuthMsg(msg, isError) {
