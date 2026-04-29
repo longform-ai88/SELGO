@@ -1422,6 +1422,7 @@ function renderItems() {
   });
 }
 
+
 function showAuthMsg(msg, isError) {
   const el = document.getElementById("loginError");
   if (!el) return;
@@ -1837,6 +1838,7 @@ async function runHighLogicAssistant(){
 }
 
 window.onload=()=>{
+  updateAuthUI();
   // eksisterende kode...
   fetchItems(); // Legg til denne linjen for å hente og vise annonser ved innlastning
 setLang("no");
