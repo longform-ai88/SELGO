@@ -726,6 +726,7 @@ font-size: 30px;
 
 <!-- Brukernavn-pane -->
 <div class="auth-pane active" id="pane-username">
+  <input id="fullName" placeholder="Fullt navn (vises for kjøpere)">
   <input id="username" placeholder="Brukernavn">
   <input id="password" type="password" placeholder="Passord">
   <select id="sellerType">
@@ -742,6 +743,7 @@ font-size: 30px;
 
 <!-- Mobilnummer-pane -->
 <div class="auth-pane" id="pane-mobile">
+  <input id="mobileFullName" placeholder="Fullt navn (vises for kjøpere)">
   <input id="phoneInput" type="tel" placeholder="Mobilnummer (f.eks. 98765432)" maxlength="20">
   <input id="phonePassword" type="password" placeholder="Velg passord">
   <input id="mobileInviteCode" placeholder="Invitasjonskode (valgfritt)" autocomplete="off">
@@ -1476,7 +1478,7 @@ function openItemDetail(itemId) {
     <p style="font-size:22px;font-weight:800;color:#0d274f;margin:0 0 12px">${item.price} kr${item.location ? " · " + item.location : ""}</p>
     <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#233a5d">${item.description || ""}</p>
     <p style="font-size:13px;color:#476086;margin:4px 0">Kategori: ${item.category || "Ukjent"}</p>
-    <p style="font-size:13px;color:#476086;margin:4px 0"><span class="seller-badge">${sellerTypeText}</span>Selger: <strong>${item.seller_username || "ukjent"}</strong></p>
+    <p style="font-size:13px;color:#476086;margin:4px 0"><span class="seller-badge">${sellerTypeText}</span>Selger: <strong>${item.seller_name || item.seller_username || "ukjent"}</strong></p>
     ${addressHtml}
     ${phoneHtml}
     <p style="font-size:13px;color:#476086;margin:4px 0">Utløper: ${expiresText}</p>
@@ -1572,15 +1574,19 @@ async function register(mode){
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;
+    const fn = document.getElementById("mobileFullName")?.value.trim() || "";
     if (!ph || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
     form.append("phone", ph);
     form.append("password", pw);
+    if (fn) form.append("full_name", fn);
   } else {
     const u = document.getElementById("username").value.trim();
     const pw = document.getElementById("password").value;
+    const fn = document.getElementById("fullName")?.value.trim() || "";
     if (!u || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
     form.append("username", u);
     form.append("password", pw);
+    if (fn) form.append("full_name", fn);
   }
 
   form.append("seller_type", sellerType);

@@ -45,6 +45,7 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "users", "seller_type", "VARCHAR DEFAULT 'privat'")
     _add_column_if_missing(_conn, "users", "company_name", "VARCHAR")
     _add_column_if_missing(_conn, "users", "is_free", "INTEGER DEFAULT 0")
+    _add_column_if_missing(_conn, "users", "full_name", "VARCHAR")
 
     _add_column_if_missing(_conn, "items", "status", "VARCHAR DEFAULT 'active'")
     _add_column_if_missing(_conn, "items", "listing_type", "VARCHAR")
@@ -116,7 +117,7 @@ def serve_app():
 INVITE_CODE = os.getenv("INVITE_CODE", "")
 
 @app.post("/register")
-def register(username: str = Form(None), password: str = Form(...), phone: str = Form(None), invite_code: str = Form(None), db: Session = Depends(get_db)):
+def register(username: str = Form(None), password: str = Form(...), phone: str = Form(None), full_name: str = Form(None), invite_code: str = Form(None), db: Session = Depends(get_db)):
     if not username and not phone:
         raise HTTPException(400, "Brukernavn eller mobilnummer er påkrevd")
 
@@ -131,6 +132,7 @@ def register(username: str = Form(None), password: str = Form(...), phone: str =
     user = UserDB(
         username=effective_username,
         password=pwd.hash(password),
+        full_name=full_name.strip() if full_name else None,
         phone=phone,
         is_verified=bool(phone),
         is_free=is_free
@@ -186,6 +188,7 @@ def listings(db: Session = Depends(get_db)):
         seller_user = db.query(UserDB).filter(UserDB.username == seller_username).first() if seller_username else None
         d = {c.name: getattr(item, c.name) for c in item.__table__.columns}
         d["seller_username"] = seller_username
+        d["seller_name"] = seller_user.full_name if seller_user and seller_user.full_name else seller_username
         d["seller_type"] = seller_user.seller_type if seller_user else "privat"
         d["seller_company_name"] = seller_user.company_name if seller_user else None
         result.append(d)

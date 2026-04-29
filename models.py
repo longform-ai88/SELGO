@@ -26,6 +26,7 @@ class UserDB(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String, unique=True)
     password = Column(String)
+    full_name = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     vipps_sub = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False)
