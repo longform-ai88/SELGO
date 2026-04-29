@@ -113,7 +113,7 @@ def serve_app():
     return FileResponse("index.html")
 
 # === REGISTER ===
-INVITE_CODE = os.getenv("FAMILIE_CODE", "")
+INVITE_CODE = os.getenv("INVITE_CODE", "")
 
 @app.post("/register")
 def register(username: str = Form(None), password: str = Form(...), phone: str = Form(None), invite_code: str = Form(None), db: Session = Depends(get_db)):
