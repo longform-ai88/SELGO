@@ -44,6 +44,7 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "users", "is_verified", "INTEGER DEFAULT 0")
     _add_column_if_missing(_conn, "users", "seller_type", "VARCHAR DEFAULT 'privat'")
     _add_column_if_missing(_conn, "users", "company_name", "VARCHAR")
+    _add_column_if_missing(_conn, "users", "is_free", "INTEGER DEFAULT 0")
 
     _add_column_if_missing(_conn, "items", "status", "VARCHAR DEFAULT 'active'")
     _add_column_if_missing(_conn, "items", "listing_type", "VARCHAR")
@@ -112,8 +113,10 @@ def serve_app():
     return FileResponse("index.html")
 
 # === REGISTER ===
+INVITE_CODE = os.getenv("INVITE_CODE", "")
+
 @app.post("/register")
-def register(username: str = Form(None), password: str = Form(...), phone: str = Form(None), db: Session = Depends(get_db)):
+def register(username: str = Form(None), password: str = Form(...), phone: str = Form(None), invite_code: str = Form(None), db: Session = Depends(get_db)):
     if not username and not phone:
         raise HTTPException(400, "Brukernavn eller mobilnummer er påkrevd")
 
@@ -123,16 +126,19 @@ def register(username: str = Form(None), password: str = Form(...), phone: str =
     if existing:
         raise HTTPException(400, "Bruker finnes allerede")
 
+    is_free = bool(INVITE_CODE and invite_code and invite_code.strip() == INVITE_CODE)
+
     user = UserDB(
         username=effective_username,
         password=pwd.hash(password),
         phone=phone,
-        is_verified=bool(phone)
+        is_verified=bool(phone),
+        is_free=is_free
     )
 
     db.add(user)
     db.commit()
-    return {"msg": "ok"}
+    return {"msg": "ok", "is_free": is_free}
 
 # === LOGIN ===
 @app.post("/login")

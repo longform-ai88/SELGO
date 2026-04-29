@@ -29,6 +29,7 @@ class UserDB(Base):
     phone = Column(String, nullable=True)
     vipps_sub = Column(String, nullable=True)
     is_verified = Column(Boolean, default=False)
+    is_free = Column(Boolean, default=False)
     seller_type = Column(String, default="privat")
     company_name = Column(String, nullable=True)
 

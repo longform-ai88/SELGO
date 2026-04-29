@@ -733,6 +733,7 @@ font-size: 30px;
     <option value="naering">Selgertype: Næring</option>
   </select>
   <input id="companyName" placeholder="Firmanavn (kun for næring)">
+  <input id="inviteCode" placeholder="Invitasjonskode (valgfritt)" autocomplete="off">
   <button id="loginBtn">Logg inn</button>
   <button onclick="register('username')" id="registerBtn" class="ghost">Registrer ny bruker</button>
     <button type="button" class="vipps-secondary" onclick="continueWithVipps()">Fortsett med Vipps</button>
@@ -743,6 +744,7 @@ font-size: 30px;
 <div class="auth-pane" id="pane-mobile">
   <input id="phoneInput" type="tel" placeholder="Mobilnummer (f.eks. 98765432)" maxlength="20">
   <input id="phonePassword" type="password" placeholder="Velg passord">
+  <input id="mobileInviteCode" placeholder="Invitasjonskode (valgfritt)" autocomplete="off">
   <button type="button" id="mobileLoginBtn" onclick="login('mobile')">Logg inn med mobil</button>
   <button type="button" id="mobileRegisterBtn" onclick="register('mobile')" class="ghost">Registrer med mobilnummer</button>
 </div>
@@ -1584,6 +1586,8 @@ async function register(mode){
 
   form.append("seller_type", sellerType);
   form.append("company_name", companyName);
+  const inviteCode = (document.getElementById(mode === "mobile" ? "mobileInviteCode" : "inviteCode")?.value || "").trim();
+  if (inviteCode) form.append("invite_code", inviteCode);
 
   const res = await fetch(API + "/register", {
     method: "POST",
