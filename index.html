@@ -741,8 +741,8 @@ font-size: 30px;
 <div class="auth-pane" id="pane-mobile">
   <input id="phoneInput" type="tel" placeholder="Mobilnummer (f.eks. 98765432)" maxlength="20">
   <input id="phonePassword" type="password" placeholder="Velg passord">
-  <button onclick="login('mobile')">Logg inn med mobil</button>
-  <button onclick="register('mobile')" class="ghost">Registrer med mobilnummer</button>
+  <button type="button" id="mobileLoginBtn" onclick="login('mobile')">Logg inn med mobil</button>
+  <button type="button" id="mobileRegisterBtn" onclick="register('mobile')" class="ghost">Registrer med mobilnummer</button>
 </div>
 
 <!-- Vipps-pane -->
@@ -1859,8 +1859,8 @@ if (loginBtn) {
 }
 if (registerBtn) registerBtn.addEventListener("click", () => register("username"));
 
-const mobileLoginBtn = document.querySelector("#pane-mobile button[onclick*=\"login('mobile')\"]");
-const mobileRegisterBtn = document.querySelector("#pane-mobile button[onclick*=\"register('mobile')\"]");
+const mobileLoginBtn = document.getElementById("mobileLoginBtn");
+const mobileRegisterBtn = document.getElementById("mobileRegisterBtn");
 // 🔥 Legg denne linjen her
 updateAuthUI();
 if (mobileLoginBtn) mobileLoginBtn.addEventListener("click", () => login("mobile"));
