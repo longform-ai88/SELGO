@@ -1442,10 +1442,18 @@ async function login(mode){
   }
   const data = await res.json();
   localStorage.setItem("token", data.access_token);
+  // 👇 LEGG DETTE HER
+  if (loginBtn) {
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Logget inn";
+  }
+
   document.getElementById("logoutBtn").style.display = "";
+
+  // reload så UI oppdateres riktig
+  location.reload();
   const errEl = document.getElementById("loginError");
   if (errEl) errEl.style.display = "none";
-  if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
   fetchItems();
   } catch (e) {
     if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
