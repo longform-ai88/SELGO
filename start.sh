@@ -10,5 +10,5 @@ if [ -n "$PIDS" ]; then
 fi
 
 source .venv/bin/activate
-echo "Starter SELGO API på http://127.0.0.1:8000 ..."
+echo "Starter SELGA API på http://127.0.0.1:8000 ..."
 python -m uvicorn main:app --reload

@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./selgo.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./selga.db")
 
 # Render PostgreSQL URLs start with postgres://, SQLAlchemy needs postgresql://
 if DATABASE_URL.startswith("postgres://"):

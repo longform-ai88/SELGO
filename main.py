@@ -76,11 +76,11 @@ app.add_middleware(
 SECRET = "change-this"
 ALGO = "HS256"
 
-APP_BASE_URL = os.getenv("APP_BASE_URL", "https://selgo.onrender.com")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://selga.no")
 
 VIPPS_REDIRECT_URI = os.getenv(
     "VIPPS_REDIRECT_URI",
-    "https://sego-qmo1.onrender.com/auth/vipps/callback"
+    "https://selga.no/auth/vipps/callback"
 )
 
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
@@ -167,7 +167,7 @@ def vipps_auth_url():
 
 @app.get("/auth/vipps/callback")
 def vipps_callback():
-    frontend_url = "https://selgo.onrender.com/app"
+    frontend_url = "https://selga.no/app"
     return RedirectResponse(frontend_url)
 
 # === LISTINGS (MINIMAL SAFE) ===

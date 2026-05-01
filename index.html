@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SELGO</title>
+<title>SELGA</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23a259ff'/><stop offset='100%25' stop-color='%23ff6a00'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text x='50' y='68' font-size='52' font-family='sans-serif' font-weight='900' fill='white' text-anchor='middle'>S</text></svg>">
 
 <style>
@@ -16,10 +16,64 @@ box-sizing: border-box;
 body {
 font-family: "Manrope", "Segoe UI", sans-serif;
 background: radial-gradient(circle at 10% 10%, #d8ccff 0%, #e8e2ff 35%, #ddd6f5 100%);
-padding: 24px;
+padding: 88px 24px 24px;
 color: #102039;
 margin: 0;
 position: relative;
+}
+
+.top-fixed-bar {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+height: 64px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 10px 18px;
+background: rgba(255, 255, 255, 0.92);
+backdrop-filter: blur(8px);
+border-bottom: 1px solid #dce3ef;
+box-shadow: 0 8px 24px rgba(16, 32, 57, 0.08);
+z-index: 980;
+}
+
+.brand-home {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 42px;
+height: 42px;
+border-radius: 12px;
+background: linear-gradient(135deg, #a259ff 0%, #ff6a00 100%);
+box-shadow: 0 8px 18px rgba(16, 32, 57, 0.18);
+text-decoration: none;
+}
+
+.brand-home svg {
+width: 24px;
+height: 24px;
+fill: #fff;
+}
+
+.profile-shortcut {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 42px;
+height: 42px;
+border-radius: 12px;
+background: #f2f6ff;
+border: 1px solid #c7d5ef;
+box-shadow: 0 6px 14px rgba(16, 32, 57, 0.1);
+text-decoration: none;
+}
+
+.profile-shortcut svg {
+width: 22px;
+height: 22px;
+fill: #0d274f;
 }
 
 .page-layout {
@@ -230,7 +284,7 @@ margin: 10px 0 4px;
 display: flex;
 gap: 6px;
 position: absolute;
-top: 20px;
+top: 74px;
 right: 24px;
 }
 
@@ -659,7 +713,11 @@ margin-bottom: 12px;
 
 @media (max-width: 700px) {
 body {
-padding: 14px;
+padding: 82px 14px 14px;
+}
+
+.top-fixed-bar {
+padding: 10px 12px;
 }
 
 .form-grid,
@@ -676,6 +734,19 @@ font-size: 30px;
 
 <body>
 
+<div class="top-fixed-bar">
+  <a class="brand-home" href="/" aria-label="Til hovedside">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3.2 2.7 11a1 1 0 0 0 .65 1.75h1.9v6.55a1.7 1.7 0 0 0 1.7 1.7h3.8a1 1 0 0 0 1-1v-4.5h1.5V20a1 1 0 0 0 1 1h3.8a1.7 1.7 0 0 0 1.7-1.7v-6.55h1.9A1 1 0 0 0 21.3 11L12 3.2z"/>
+    </svg>
+  </a>
+  <a class="profile-shortcut" href="#authPanel" aria-label="Profilhandling" onclick="handleProfileShortcutClick(event)">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 12.2a4.6 4.6 0 1 0 0-9.2 4.6 4.6 0 0 0 0 9.2zm0 2.3c-4.45 0-8.1 2.34-8.1 5.2 0 .72.58 1.3 1.3 1.3h13.6a1.3 1.3 0 0 0 1.3-1.3c0-2.86-3.65-5.2-8.1-5.2z"/>
+    </svg>
+  </a>
+</div>
+
 <div class="lang-switch">
 <button onclick="setLang('no')">NO</button>
 <button onclick="setLang('en')">EN</button>
@@ -689,7 +760,7 @@ font-size: 30px;
 
 <div class="ai-assistant">
 <div class="assistant-top">
-<h3>SELGO Assistent</h3>
+<h3>SELGA Assistent</h3>
 <button id="assistantToggle" class="assistant-toggle" onclick="toggleAssistant()">Skjul</button>
 </div>
 <div class="ai-output" id="aiOutput"><div class="ai-msg bot"><span>Hva kan jeg hjelpe deg med?</span></div></div>
@@ -701,7 +772,7 @@ font-size: 30px;
 
 <div class="main-title">
   <div class="logo-wrap">
-    <span class="logo-wordmark">SELGO<span class="logo-dot"></span></span>
+    <span class="logo-wordmark">SELGA<span class="logo-dot"></span></span>
     <span class="logo-tagline">Norges markedsplass</span>
   </div>
 </div>
@@ -897,15 +968,15 @@ font-size: 30px;
 
 <script>
 // --- API CONFIG ---
-// Set window.SELGO_API_BASE in a deployment config or environment to override.
+// Set window.SELGA_API_BASE in a deployment config or environment to override.
 // For local dev: http://127.0.0.1:8000
-// For production: https://your-backend.onrender.com
-const API = "https://sego-qmo1.onrender.com";
+// For production: https://selga.no
+const API = "https://selga.no";
 
 function saveApiBase(nextApiBase) {
   const trimmed = (nextApiBase || "").trim().replace(/\/$/, "");
   if (!trimmed) return false;
-  localStorage.setItem("SELGO_API_BASE", trimmed);
+  localStorage.setItem("SELGA_API_BASE", trimmed);
   return true;
 }
 
@@ -915,7 +986,7 @@ function maybePromptApiSetup(reasonText) {
   const wantsSetup = confirm(msg);
   if (!wantsSetup) return;
 
-  const entered = prompt("Lim inn backend URL (f.eks. ):", current || "https://sego-qmo1.onrender.com");
+  const entered = prompt("Lim inn backend URL (f.eks. ):", current || "https://selga.no");
   if (!entered) return;
   if (!saveApiBase(entered)) return;
   alert("API-base lagret. Siden lastes på nytt.");
@@ -957,7 +1028,7 @@ let lang = "no";
 
 const t = {
 no: {
-welcome:"Velkommen til SELGO",
+welcome:"Velkommen til SELGA",
 login:"Logg inn",
 register:"Registrer",
 logout:"Logg ut",
@@ -972,7 +1043,7 @@ payVipps:"Betal med Vipps",
 payStripe:"Betal med Stripe"
 },
 en: {
-welcome:"Welcome to SELGO",
+welcome:"Welcome to SELGA",
 login:"Login",
 register:"Register",
 logout:"Logout",
@@ -1005,6 +1076,7 @@ let activeCategory = "ALL";
 let activeSubcat = null;
 let latestPendingOrderId = null;
 let listingFlowStep = 1;
+const PROFILE_REGISTERED_KEY = "selga_registered";
 
 function toggleAssistant(){
   const box = document.querySelector(".ai-assistant");
@@ -1027,13 +1099,13 @@ function continueWithVipps(){
 const legalDocs = {
   tos: {
     title: "Vilkår for bruk",
-    html: `<p>Ved bruk av SELGO godtar du disse vilkårene. Du er ansvarlig for at annonseinnhold er korrekt, lovlig og ikke krenker andres rettigheter.</p>
-<p>Brukere må ikke publisere svindel, ulovlige produkter eller villedende informasjon. SELGO kan fjerne innhold som bryter vilkårene.</p>
+    html: `<p>Ved bruk av SELGA godtar du disse vilkårene. Du er ansvarlig for at annonseinnhold er korrekt, lovlig og ikke krenker andres rettigheter.</p>
+  <p>Brukere må ikke publisere svindel, ulovlige produkter eller villedende informasjon. SELGA kan fjerne innhold som bryter vilkårene.</p>
 <p>Betalte annonser refunderes normalt ikke etter publisering med mindre annet følger av ufravikelig lov.</p>`
   },
   privacy: {
     title: "Personvernerklæring",
-    html: `<p>SELGO behandler personopplysninger for å levere tjenesten: brukerprofil, annonser, meldinger og betalingstransaksjoner.</p>
+    html: `<p>SELGA behandler personopplysninger for å levere tjenesten: brukerprofil, annonser, meldinger og betalingstransaksjoner.</p>
 <p>Vi lagrer kun nødvendige opplysninger og beskytter disse med tekniske og organisatoriske tiltak. Opplysninger deles kun med betalingsleverandører og lovpålagte mottakere.</p>
 <p>Du har rett til innsyn, retting og dataportabilitet i henhold til personvernregelverket.</p>`
   },
@@ -1519,6 +1591,45 @@ function showAuthMsg(msg, isError) {
   el.style.border = isError ? "1px solid #efc0c0" : "1px solid #a8dfb8";
 }
 
+function getActiveAuthMode() {
+  const activePane = document.querySelector(".auth-pane.active");
+  if (activePane && activePane.id === "pane-mobile") return "mobile";
+  return "username";
+}
+
+function isRegisteredLocally() {
+  return localStorage.getItem(PROFILE_REGISTERED_KEY) === "1";
+}
+
+async function handleProfileShortcutClick(event) {
+  if (event) event.preventDefault();
+
+  const token = localStorage.getItem("token");
+  if (token) {
+    logout();
+    return;
+  }
+
+  const authPanel = document.getElementById("authPanel");
+  if (authPanel) authPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  const mode = getActiveAuthMode();
+  if (isRegisteredLocally()) {
+    if (mode === "mobile") {
+      await login("mobile");
+      return;
+    }
+    await login("username");
+    return;
+  }
+
+  if (mode === "mobile") {
+    await register("mobile");
+    return;
+  }
+  await register("username");
+}
+
 function updateAuthUI() {
     const token = localStorage.getItem("token");
     const loginBtn = document.getElementById("loginBtn");
@@ -1571,6 +1682,7 @@ async function login(mode){
   }
   const data = await res.json();
   localStorage.setItem("token", data.access_token);
+  localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
   updateAuthUI();
   if (loginBtn) {
     loginBtn.disabled = false;
@@ -1625,6 +1737,7 @@ async function register(mode){
     return;
   }
   if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
+  localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
   showAuthMsg("Bruker opprettet! Du kan nå logge inn.", false);
   } catch (e) {
     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }

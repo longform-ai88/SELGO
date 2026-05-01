@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: selgo
+    name: selga
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
