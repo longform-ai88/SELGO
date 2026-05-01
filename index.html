@@ -1141,6 +1141,39 @@ async function ensureWorkingApiBase() {
   return API;
 }
 
+async function fetchWithAutoApi(path, options = {}) {
+  const run = async (base) => fetch(base + path, options);
+
+  let firstResponse = null;
+  let firstError = null;
+  const currentBase = API;
+
+  try {
+    firstResponse = await run(currentBase);
+    if (firstResponse.ok) return firstResponse;
+
+    const contentType = (firstResponse.headers.get("content-type") || "").toLowerCase();
+    const looksLikeWrongApi =
+      firstResponse.status === 404 ||
+      firstResponse.status === 405 ||
+      contentType.includes("text/html");
+
+    if (!looksLikeWrongApi) {
+      return firstResponse;
+    }
+  } catch (err) {
+    firstError = err;
+  }
+
+  const resolved = await ensureWorkingApiBase();
+  if (resolved && resolved !== currentBase) {
+    return run(resolved);
+  }
+
+  if (firstResponse) return firstResponse;
+  throw firstError || new Error("API unavailable");
+}
+
 function saveApiBase(nextApiBase) {
   const trimmed = (nextApiBase || "").trim().replace(/\/$/, "");
   if (!trimmed) return false;
@@ -1847,7 +1880,7 @@ async function loginFromProfileModal() {
   form.append("password", password);
 
   try {
-    const res = await fetch(API + "/login", { method: "POST", body: form });
+    const res = await fetchWithAutoApi("/login", { method: "POST", body: form });
     if (!res.ok) {
       const err = await readErrorPayload(res);
       setProfileModalMessage(`Innlogging feilet. ${err.detail || ""}`.trim(), true);
@@ -1861,7 +1894,6 @@ async function loginFromProfileModal() {
     location.reload();
   } catch (e) {
     setProfileModalMessage("Nettverksfeil ved innlogging", true);
-    maybePromptApiSetup("Fant ikke backend-tilkobling under innlogging.");
   }
 }
 
@@ -1880,7 +1912,7 @@ async function registerFromProfileModal() {
   if (fullName) form.append("full_name", fullName);
 
   try {
-    const res = await fetch(API + "/register", { method: "POST", body: form });
+    const res = await fetchWithAutoApi("/register", { method: "POST", body: form });
     if (!res.ok) {
       const err = await readErrorPayload(res);
       setProfileModalMessage(`Registrering feilet. ${err.detail || ""}`.trim(), true);
@@ -1891,7 +1923,6 @@ async function registerFromProfileModal() {
     setProfileModalMessage("Bruker opprettet. Logg inn nå.", false);
   } catch (e) {
     setProfileModalMessage("Nettverksfeil ved registrering", true);
-    maybePromptApiSetup("Fant ikke backend-tilkobling under registrering.");
   }
 }
 
@@ -1939,7 +1970,7 @@ async function login(mode){
     form.append("password", pw);
   }
 
-  const res = await fetch(API + "/login", {
+  const res = await fetchWithAutoApi("/login", {
     method: "POST",
     body: form
   });
@@ -1961,7 +1992,6 @@ async function login(mode){
   } catch (e) {
     if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
     showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
-    maybePromptApiSetup("Fant ikke backend-tilkobling under innlogging.");
   }
 }
 
@@ -1996,7 +2026,7 @@ async function register(mode){
   const inviteCode = (document.getElementById(mode === "mobile" ? "mobileInviteCode" : "inviteCode")?.value || "").trim();
   if (inviteCode) form.append("invite_code", inviteCode);
 
-  const res = await fetch(API + "/register", {
+  const res = await fetchWithAutoApi("/register", {
     method: "POST",
     body: form
   });
@@ -2012,7 +2042,6 @@ async function register(mode){
   } catch (e) {
     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
     showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
-    maybePromptApiSetup("Fant ikke backend-tilkobling under registrering.");
   }
 }
 
