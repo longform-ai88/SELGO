@@ -39,6 +39,12 @@ box-shadow: 0 8px 24px rgba(16, 32, 57, 0.08);
 z-index: 980;
 }
 
+.top-right-controls {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+}
+
 .brand-home {
 display: inline-flex;
 align-items: center;
@@ -74,6 +80,68 @@ text-decoration: none;
 width: 22px;
 height: 22px;
 fill: #0d274f;
+}
+
+.profile-modal-backdrop {
+position: fixed;
+inset: 0;
+background: rgba(10, 20, 40, 0.45);
+display: none;
+align-items: center;
+justify-content: center;
+padding: 18px;
+z-index: 1001;
+}
+
+.profile-modal {
+width: min(420px, 100%);
+background: #fff;
+border-radius: 16px;
+border: 1px solid #dce3ef;
+box-shadow: 0 20px 60px rgba(16, 32, 57, 0.22);
+padding: 16px;
+}
+
+.profile-form {
+display: grid;
+gap: 8px;
+margin-top: 8px;
+}
+
+.profile-form-actions {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 8px;
+margin-top: 8px;
+}
+
+.profile-info {
+font-size: 13px;
+color: #476086;
+margin: 6px 0 10px;
+}
+
+.post-shortcut {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 50px;
+height: 50px;
+border-radius: 14px;
+border: 1px solid #e15a00;
+background: linear-gradient(180deg, #ff8e2b 0%, #ff6a00 100%);
+box-shadow: 0 10px 22px rgba(255, 106, 0, 0.28);
+color: #fff;
+font-size: 34px;
+font-weight: 800;
+line-height: 1;
+cursor: pointer;
+padding: 0;
+margin: 0;
+}
+
+.post-shortcut:hover {
+filter: brightness(0.98);
 }
 
 .page-layout {
@@ -720,6 +788,12 @@ padding: 82px 14px 14px;
 padding: 10px 12px;
 }
 
+.post-shortcut {
+width: 46px;
+height: 46px;
+font-size: 32px;
+}
+
 .form-grid,
 .card-actions {
 grid-template-columns: 1fr;
@@ -740,11 +814,24 @@ font-size: 30px;
       <path d="M12 3.2 2.7 11a1 1 0 0 0 .65 1.75h1.9v6.55a1.7 1.7 0 0 0 1.7 1.7h3.8a1 1 0 0 0 1-1v-4.5h1.5V20a1 1 0 0 0 1 1h3.8a1.7 1.7 0 0 0 1.7-1.7v-6.55h1.9A1 1 0 0 0 21.3 11L12 3.2z"/>
     </svg>
   </a>
-  <a class="profile-shortcut" href="#authPanel" aria-label="Profilhandling" onclick="handleProfileShortcutClick(event)">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 12.2a4.6 4.6 0 1 0 0-9.2 4.6 4.6 0 0 0 0 9.2zm0 2.3c-4.45 0-8.1 2.34-8.1 5.2 0 .72.58 1.3 1.3 1.3h13.6a1.3 1.3 0 0 0 1.3-1.3c0-2.86-3.65-5.2-8.1-5.2z"/>
-    </svg>
-  </a>
+  <button type="button" class="post-shortcut" aria-label="Legg ut annonse" onclick="openListingFlow()">+</button>
+  <div class="top-right-controls">
+    <a class="profile-shortcut" href="#" aria-label="Profilhandling" onclick="openProfileModal(event)">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 12.2a4.6 4.6 0 1 0 0-9.2 4.6 4.6 0 0 0 0 9.2zm0 2.3c-4.45 0-8.1 2.34-8.1 5.2 0 .72.58 1.3 1.3 1.3h13.6a1.3 1.3 0 0 0 1.3-1.3c0-2.86-3.65-5.2-8.1-5.2z"/>
+      </svg>
+    </a>
+  </div>
+</div>
+
+<div id="profileModal" class="profile-modal-backdrop" onclick="closeProfileModal(event)">
+  <div class="profile-modal" onclick="event.stopPropagation()">
+    <div class="assistant-top" style="margin-bottom:8px">
+      <h3 id="profileModalTitle" style="margin:0">Profil</h3>
+      <button type="button" class="ghost" onclick="closeProfileModal()">Lukk</button>
+    </div>
+    <div id="profileModalBody"></div>
+  </div>
 </div>
 
 <div class="lang-switch">
@@ -971,7 +1058,88 @@ font-size: 30px;
 // Set window.SELGA_API_BASE in a deployment config or environment to override.
 // For local dev: http://127.0.0.1:8000
 // For production: https://selga.no
-const API = "https://selga.no";
+let API = (() => {
+  const normalize = (value) => (value || "").trim().replace(/\/$/, "");
+  const host = (window.location.hostname || "").toLowerCase();
+  const origin = normalize(window.location.origin);
+  const isLocal = host === "localhost" || host === "127.0.0.1";
+
+  const fromWindow = normalize(window.SELGA_API_BASE);
+  const fromStorage = normalize(localStorage.getItem("SELGA_API_BASE"));
+  const fromQuery = normalize(new URLSearchParams(window.location.search).get("api"));
+
+  if (fromQuery) return fromQuery;
+  if (fromWindow) return fromWindow;
+
+  // On local development, allow manual API override from localStorage.
+  if (isLocal) {
+    if (fromStorage) return fromStorage;
+    return "http://127.0.0.1:8000";
+  }
+
+  // In production, default to same-origin to avoid stale stored API URLs.
+  if (origin && origin !== "null") return origin;
+
+  if (fromStorage) return fromStorage;
+  return "https://selga.no";
+})();
+
+function getApiCandidates() {
+  const normalize = (value) => (value || "").trim().replace(/\/$/, "");
+  const host = (window.location.hostname || "").toLowerCase();
+  const origin = normalize(window.location.origin);
+  const fromWindow = normalize(window.SELGA_API_BASE);
+  const fromStorage = normalize(localStorage.getItem("SELGA_API_BASE"));
+  const fromQuery = normalize(new URLSearchParams(window.location.search).get("api"));
+
+  const candidates = [
+    API,
+    fromQuery,
+    fromWindow,
+    origin,
+    fromStorage,
+    "https://sego-qmo1.onrender.com",
+    "https://selga.onrender.com",
+    "https://selga.no"
+  ];
+
+  if (host === "localhost" || host === "127.0.0.1") {
+    candidates.unshift("http://127.0.0.1:8000");
+  }
+
+  return [...new Set(candidates.filter(Boolean))];
+}
+
+async function probeApiBase(base) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
+  try {
+    const res = await fetch(base + "/listings", {
+      method: "GET",
+      cache: "no-store",
+      headers: {"Accept": "application/json"},
+      signal: controller.signal
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function ensureWorkingApiBase() {
+  const candidates = getApiCandidates();
+  for (const candidate of candidates) {
+    const ok = await probeApiBase(candidate);
+    if (ok) {
+      API = candidate;
+      saveApiBase(candidate);
+      return candidate;
+    }
+  }
+  return API;
+}
 
 function saveApiBase(nextApiBase) {
   const trimmed = (nextApiBase || "").trim().replace(/\/$/, "");
@@ -1077,6 +1245,7 @@ let activeSubcat = null;
 let latestPendingOrderId = null;
 let listingFlowStep = 1;
 const PROFILE_REGISTERED_KEY = "selga_registered";
+let profileModalMode = "login";
 
 function toggleAssistant(){
   const box = document.querySelector(".ai-assistant");
@@ -1601,33 +1770,133 @@ function isRegisteredLocally() {
   return localStorage.getItem(PROFILE_REGISTERED_KEY) === "1";
 }
 
-async function handleProfileShortcutClick(event) {
+function openProfileModal(event) {
   if (event) event.preventDefault();
+  profileModalMode = isRegisteredLocally() ? "login" : "register";
+  renderProfileModalBody();
+  const modal = document.getElementById("profileModal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeProfileModal(event) {
+  if (event && event.target && event.target.id !== "profileModal") return;
+  const modal = document.getElementById("profileModal");
+  if (modal) modal.style.display = "none";
+}
+
+function setProfileModalMode(mode) {
+  profileModalMode = mode === "register" ? "register" : "login";
+  renderProfileModalBody();
+}
+
+function setProfileModalMessage(message, isError) {
+  const el = document.getElementById("profileModalMsg");
+  if (!el) return;
+  el.textContent = message || "";
+  el.style.display = message ? "block" : "none";
+  el.style.color = isError ? "#7a1f1f" : "#1a5c2a";
+  el.style.background = isError ? "#fff3f3" : "#f0fff4";
+  el.style.border = isError ? "1px solid #efc0c0" : "1px solid #a8dfb8";
+  el.style.borderRadius = "8px";
+  el.style.padding = "8px 10px";
+}
+
+function renderProfileModalBody() {
+  const body = document.getElementById("profileModalBody");
+  const title = document.getElementById("profileModalTitle");
+  if (!body || !title) return;
 
   const token = localStorage.getItem("token");
   if (token) {
-    logout();
+    const username = getLoggedInUsername() || "bruker";
+    title.textContent = "Profil";
+    body.innerHTML = `
+      <p class="profile-info">Du er innlogget som <strong>${username}</strong>.</p>
+      <button type="button" class="vipps-secondary" onclick="logoutFromProfileModal()">Logg ut</button>
+    `;
     return;
   }
 
-  const authPanel = document.getElementById("authPanel");
-  if (authPanel) authPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  const isLogin = profileModalMode === "login";
+  title.textContent = isLogin ? "Logg inn" : "Registrer";
+  body.innerHTML = `
+    <p class="profile-info">${isLogin ? "Logg inn med brukernavn og passord." : "Opprett ny bruker med brukernavn og passord."}</p>
+    <div class="profile-form">
+      ${isLogin ? "" : '<input id="profileFullNameInput" placeholder="Fullt navn (valgfritt)">'}
+      <input id="profileUsernameInput" placeholder="Brukernavn">
+      <input id="profilePasswordInput" type="password" placeholder="Passord">
+    </div>
+    <div id="profileModalMsg" style="display:none"></div>
+    <div class="profile-form-actions">
+      <button type="button" onclick="${isLogin ? "loginFromProfileModal()" : "registerFromProfileModal()"}">${isLogin ? "Logg inn" : "Registrer"}</button>
+      <button type="button" class="ghost" onclick="setProfileModalMode('${isLogin ? "register" : "login"}')">${isLogin ? "Til registrering" : "Til innlogging"}</button>
+    </div>
+  `;
+}
 
-  const mode = getActiveAuthMode();
-  if (isRegisteredLocally()) {
-    if (mode === "mobile") {
-      await login("mobile");
+async function loginFromProfileModal() {
+  const username = (document.getElementById("profileUsernameInput")?.value || "").trim();
+  const password = document.getElementById("profilePasswordInput")?.value || "";
+  if (!username || !password) {
+    setProfileModalMessage("Fyll inn brukernavn og passord", true);
+    return;
+  }
+
+  const form = new FormData();
+  form.append("username", username);
+  form.append("password", password);
+
+  try {
+    const res = await fetch(API + "/login", { method: "POST", body: form });
+    if (!res.ok) {
+      const err = await readErrorPayload(res);
+      setProfileModalMessage(`Innlogging feilet. ${err.detail || ""}`.trim(), true);
       return;
     }
-    await login("username");
+    const data = await res.json();
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
+    updateAuthUI();
+    closeProfileModal();
+    location.reload();
+  } catch (e) {
+    setProfileModalMessage("Nettverksfeil ved innlogging", true);
+    maybePromptApiSetup("Fant ikke backend-tilkobling under innlogging.");
+  }
+}
+
+async function registerFromProfileModal() {
+  const fullName = (document.getElementById("profileFullNameInput")?.value || "").trim();
+  const username = (document.getElementById("profileUsernameInput")?.value || "").trim();
+  const password = document.getElementById("profilePasswordInput")?.value || "";
+  if (!username || !password) {
+    setProfileModalMessage("Fyll inn brukernavn og passord", true);
     return;
   }
 
-  if (mode === "mobile") {
-    await register("mobile");
-    return;
+  const form = new FormData();
+  form.append("username", username);
+  form.append("password", password);
+  if (fullName) form.append("full_name", fullName);
+
+  try {
+    const res = await fetch(API + "/register", { method: "POST", body: form });
+    if (!res.ok) {
+      const err = await readErrorPayload(res);
+      setProfileModalMessage(`Registrering feilet. ${err.detail || ""}`.trim(), true);
+      return;
+    }
+    localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
+    setProfileModalMode("login");
+    setProfileModalMessage("Bruker opprettet. Logg inn nå.", false);
+  } catch (e) {
+    setProfileModalMessage("Nettverksfeil ved registrering", true);
+    maybePromptApiSetup("Fant ikke backend-tilkobling under registrering.");
   }
-  await register("username");
+}
+
+function logoutFromProfileModal() {
+  logout();
 }
 
 function updateAuthUI() {
@@ -1692,6 +1961,7 @@ async function login(mode){
   } catch (e) {
     if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
     showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
+    maybePromptApiSetup("Fant ikke backend-tilkobling under innlogging.");
   }
 }
 
@@ -1742,6 +2012,7 @@ async function register(mode){
   } catch (e) {
     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
     showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
+    maybePromptApiSetup("Fant ikke backend-tilkobling under registrering.");
   }
 }
 
@@ -2054,7 +2325,8 @@ async function runHighLogicAssistant(){
   output.scrollTop = output.scrollHeight;
 }
 
-window.onload=()=>{
+window.onload=async ()=>{
+  await ensureWorkingApiBase();
   updateAuthUI();
 setLang("no");
 handleStripeReturn();
