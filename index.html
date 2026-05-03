@@ -2491,6 +2491,9 @@ function calculatePrice(price, category) {
   const categoryText = (category || "").toLowerCase();
   const listingMode = (document.getElementById("listingMode")?.value || "").toLowerCase();
 
+  // Gratis for alle kategorier opp til og med 1999 kr
+  if (!Number.isFinite(amount) || amount < 2000) return 0;
+
   if (categoryText.startsWith("bil")) return 499;
 
   if (categoryText.startsWith("bolig")) {
@@ -2498,8 +2501,6 @@ function calculatePrice(price, category) {
     return 1499;
   }
 
-  if (!Number.isFinite(amount) || amount <= 0) return 0;
-  if (amount < 2000) return 0;
   if (amount <= 9999) return 199;
   if (amount <= 20000) return 299;
   return 299;
