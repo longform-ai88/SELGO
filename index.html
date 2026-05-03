@@ -38,11 +38,11 @@ scroll-behavior: smooth;
 
 body {
 font-family: "Manrope", "Segoe UI", sans-serif;
-background: linear-gradient(165deg, #fff8ef 0%, #fff2e3 38%, #ffe9d8 70%, #fffaf3 100%);
+background: linear-gradient(165deg, #1c1408 0%, #161009 38%, #1e1a0e 70%, #0f0d07 100%);
 padding: calc(80px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px));
 padding-left: max(16px, env(safe-area-inset-left, 16px));
 padding-right: max(16px, env(safe-area-inset-right, 16px));
-color: #0f172a;
+color: #f0dfa8;
 margin: 0;
 position: relative;
 overflow-x: hidden;
@@ -57,9 +57,9 @@ content: "";
 position: fixed;
 inset: 0;
 background:
-radial-gradient(ellipse 78% 50% at 50% -8%, rgba(255, 208, 166, 0.34) 0%, transparent 62%),
-radial-gradient(ellipse 52% 38% at 92% 100%, rgba(255, 188, 146, 0.24) 0%, transparent 58%),
-radial-gradient(ellipse 50% 34% at 6% 92%, rgba(255, 227, 187, 0.2) 0%, transparent 58%);
+radial-gradient(ellipse 80% 45% at 50% -5%, rgba(212, 160, 23, 0.22) 0%, transparent 65%),
+radial-gradient(ellipse 50% 35% at 95% 100%, rgba(180, 130, 15, 0.14) 0%, transparent 58%),
+radial-gradient(ellipse 48% 30% at 5% 90%, rgba(200, 150, 20, 0.12) 0%, transparent 55%);
 pointer-events: none;
 z-index: 0;
 }
@@ -68,7 +68,7 @@ body::after {
 content: "";
 position: fixed;
 inset: 0;
-background: linear-gradient(165deg, #fff8ef 0%, #fff2e3 38%, #ffe9d8 70%, #fffaf3 100%);
+background: linear-gradient(165deg, #1c1408 0%, #161009 38%, #1e1a0e 70%, #0f0d07 100%);
 z-index: -1;
 pointer-events: none;
 }
@@ -1037,18 +1037,18 @@ margin: 0 auto 20px;
 }
 
 .category-wrap {
-background: #fff;
+background: #1e1810;
 padding: 18px 18px 14px;
 border-radius: 20px;
 margin-bottom: 18px;
-border: 1px solid #e5e7eb;
-box-shadow: 0 4px 16px rgba(15,23,42,0.07);
+border: 1px solid rgba(212, 160, 23, 0.25);
+box-shadow: 0 4px 20px rgba(0,0,0,0.35);
 }
 
 .category-wrap h2 {
 font-size: 13px;
 font-weight: 700;
-color: #6b7280;
+color: rgba(212, 160, 23, 0.7);
 letter-spacing: 0.06em;
 text-transform: uppercase;
 margin: 0 0 12px 2px;
@@ -1513,7 +1513,7 @@ opacity: 0.85;
 
 .subtitle {
 margin: 4px 0 8px 0;
-color: #476086;
+color: rgba(230, 200, 130, 0.7);
 font-size: clamp(14px, 3.2vw, 15px);
 }
 
@@ -1523,7 +1523,7 @@ font-family: "Inter", "Segoe UI", sans-serif;
 font-size: clamp(20px, 5.4vw, 26px);
 font-weight: 800;
 letter-spacing: -0.015em;
-color: #0f172a;
+color: #f0dfa8;
 }
 
 .form-grid {
