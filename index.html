@@ -1007,12 +1007,18 @@ font-size: 30px;
 <button type="button" id="payBtn" class="vipps-secondary" style="display:none" onclick="handlePayment(document.getElementById('paymentProvider').value)">Gå til betaling</button>
 <div id="vippsManualBox" class="vipps-manual" style="display:none">
   <h4>Betal med Vipps</h4>
-  <p style="margin-bottom:6px">Åpne Vipps-appen og søk på nummer <strong>49939</strong>, eller scan QR-koden under:</p>
-  <div style="background:#fff;border-radius:10px;padding:10px;display:inline-block;margin:8px 0">
-    <img src="/uploads/vipps-qr.png" alt="Scan for å se Vipps-nummer 49939" loading="lazy" style="width:160px;height:160px;display:block">
-    <div style="text-align:center;font-size:13px;font-weight:bold;color:#FF5B24;margin-top:4px">Vipps 49939</div>
+  <div style="background:#fff3e8;border:1px solid #FF5B24;border-radius:10px;padding:14px;margin:8px 0;text-align:center">
+    <div style="font-size:13px;color:#555;margin-bottom:6px">Åpne Vipps og betal til dette nummeret:</div>
+    <div style="font-size:42px;font-weight:900;color:#FF5B24;letter-spacing:4px;line-height:1.1">49939</div>
+    <div style="font-size:12px;color:#888;margin-top:4px">Vipps-nummer for SELGA</div>
   </div>
-  <p style="font-size:13px;color:#444;margin:6px 0 4px">Steg: Åpne Vipps → Betal → Skriv <strong>49939</strong> → Skriv inn beløpet vist over → Send</p>
+  <div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;margin:8px 0;font-size:13px;color:#333;line-height:1.8">
+    <strong>Slik betaler du:</strong><br>
+    1. Åpne <strong>Vipps-appen</strong><br>
+    2. Trykk <strong>Send</strong> (ikke skann)<br>
+    3. Skriv <strong>49939</strong> i søkefeltet<br>
+    4. Skriv inn beløpet og send
+  </div>
   <a id="vippsDeepLink" href="https://vipps.no" target="_blank" rel="noopener" class="vipps-btn" style="display:inline-flex;text-decoration:none;margin:10px 0 8px">
     <span class="vipps-logo">Vipps</span>
     <span id="vippsDeepLinkLabel">Åpne Vipps</span>
