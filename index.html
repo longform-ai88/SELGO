@@ -1009,14 +1009,14 @@ font-size: 30px;
   <h4>Betal med Vipps</h4>
   <div style="background:#fff3e8;border:1px solid #FF5B24;border-radius:10px;padding:14px;margin:8px 0;text-align:center">
     <div style="font-size:13px;color:#555;margin-bottom:6px">Åpne Vipps og betal til dette nummeret:</div>
-    <div style="font-size:42px;font-weight:900;color:#FF5B24;letter-spacing:4px;line-height:1.1">49939</div>
+    <div style="font-size:42px;font-weight:900;color:#FF5B24;letter-spacing:4px;line-height:1.1">40315139</div>
     <div style="font-size:12px;color:#888;margin-top:4px">Vipps-nummer for SELGA</div>
   </div>
   <div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;margin:8px 0;font-size:13px;color:#333;line-height:1.8">
     <strong>Slik betaler du:</strong><br>
     1. Åpne <strong>Vipps-appen</strong><br>
     2. Trykk <strong>Send</strong> (ikke skann)<br>
-    3. Skriv <strong>49939</strong> i søkefeltet<br>
+    3. Skriv <strong>40315139</strong> i søkefeltet<br>
     4. Skriv inn beløpet og send
   </div>
   <a id="vippsDeepLink" href="https://vipps.no" target="_blank" rel="noopener" class="vipps-btn" style="display:inline-flex;text-decoration:none;margin:10px 0 8px">
@@ -2229,7 +2229,7 @@ async function handlePayment(method) {
     if (deepLabel) deepLabel.textContent = `Betal ${amountNok} kr med Vipps`;
     const box = document.getElementById("vippsManualBox");
     if (box) box.style.display = "block";
-    showPublishStatus(`Annonse opprettet og venter på Vipps betaling (${amountNok} NOK). Betal med knappen over eller Vipps-nummer 49939, og trykk deretter bekreft.`, false, true);
+    showPublishStatus(`Annonse opprettet og venter på Vipps betaling (${amountNok} NOK). Betal med knappen over eller Vipps-nummer 40315139, og trykk deretter bekreft.`, false, true);
     return;
   }
 
@@ -2327,7 +2327,7 @@ async function restoreLatestPendingPaymentOrder() {
 
     latestPendingOrderId = order.id;
     if (order.provider === "vipps") {
-      showPublishStatus(`Du har en ventende Vipps-betaling (${order.amount || "?"} NOK). Betal med QR/nummer 49939 og trykk bekreft.`, false, true);
+      showPublishStatus(`Du har en ventende Vipps-betaling (${order.amount || "?"} NOK). Betal med QR/nummer 40315139 og trykk bekreft.`, false, true);
     } else {
       showPublishStatus(`Du har en ventende betaling (${order.amount || "?"} NOK). Fullfor betalingen for a aktivere annonsen.`, false, true);
     }
