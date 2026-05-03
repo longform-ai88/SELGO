@@ -1087,8 +1087,8 @@ margin: 0 0 12px 2px;
 
 .category-grid {
 display: grid;
-grid-template-columns: repeat(3, minmax(0, 1fr));
-gap: 8px;
+grid-template-columns: repeat(3, 1fr);
+gap: 14px;
 }
 
 .cat-card {
@@ -1096,16 +1096,16 @@ display: flex;
 flex-direction: column;
 align-items: center;
 justify-content: center;
-background: #f8fafc;
-border: 1.5px solid #e5e7eb;
-border-radius: 14px;
-padding: 14px 8px;
+background: #ffffff;
+border: 1px solid #e5e7eb;
+border-radius: 16px;
+padding: 12px;
 cursor: pointer;
 transition: background 0.15s, border-color 0.15s;
 user-select: none;
-gap: 5px;
-box-shadow: none;
+gap: 6px;
 min-height: 72px;
+text-align: center;
 }
 
 .cat-card:hover {
@@ -1118,7 +1118,7 @@ transform: scale(0.97);
 }
 
 .cat-card.active {
-border-color: #0d274f;
+border: 2px solid #1e3a8a;
 background: #eff6ff;
 }
 
