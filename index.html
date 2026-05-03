@@ -123,6 +123,8 @@ text-transform: uppercase;
 display: inline-flex;
 align-items: center;
 justify-content: center;
+position: relative;
+z-index: 983;
 width: 42px;
 height: 42px;
 border-radius: 14px;
@@ -1035,10 +1037,10 @@ margin: 0 auto 20px;
 .lang-switch {
 display: flex;
 gap: 0;
-position: absolute;
+position: fixed;
 top: calc(6px + env(safe-area-inset-top, 0px));
 right: max(12px, env(safe-area-inset-right, 12px));
-z-index: 982;
+z-index: 1002;
 background: rgba(255,255,255,0.85);
 border: 1px solid #d1d5db;
 border-radius: 8px;
@@ -1763,8 +1765,11 @@ margin-bottom: 8px;
 width: 54px;
 height: 54px;
 font-size: 34px;
-right: max(12px, env(safe-area-inset-right, 12px));
-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+left: 50%;
+right: auto;
+top: calc(8px + env(safe-area-inset-top, 0px));
+bottom: auto;
+transform: translateX(-50%);
 }
 
 .empty-state {
@@ -2708,9 +2713,29 @@ function navigateToCategoryListings(categoryKey){
 
 function renderCategoryButtons(){
   const root = document.getElementById("categoryButtons");
-  let html = `<div class="cat-card ${activeCategory==="ALL"?"active":""}" data-key="ALL"><span class="cat-icon">🏷️</span><span class="cat-label">Alle</span></div>`;
-  categoryItems.forEach(c => {
-    html += `<div class="cat-card ${activeCategory===c.key?"active":""}" data-key="${c.key}"><span class="cat-icon">${c.icon}</span><span class="cat-label">${c.key}</span></div>`;
+  const categoryOrder = ["ALL", "Bil", "Motorsykkel", "Sykkel", "Bolig", "Klær", "Sport", "Elektronikk", "Diverse", "Gis bort"];
+  const labelByKey = {
+    ALL: "Alle",
+    Bil: "Bil",
+    Motorsykkel: "motorsykkel",
+    Sykkel: "sykkel",
+    Bolig: "bolig",
+    "Klær": "klær",
+    Sport: "sport",
+    Elektronikk: "elektronikk",
+    Diverse: "diverse",
+    "Gis bort": "gis bort"
+  };
+
+  let html = "";
+  categoryOrder.forEach(key => {
+    if (key === "ALL") {
+      html += `<div class="cat-card ${activeCategory==="ALL"?"active":""}" data-key="ALL"><span class="cat-icon">🏷️</span><span class="cat-label">${labelByKey.ALL}</span></div>`;
+      return;
+    }
+    const c = categoryItems.find(item => item.key === key);
+    if (!c) return;
+    html += `<div class="cat-card ${activeCategory===c.key?"active":""}" data-key="${c.key}"><span class="cat-icon">${c.icon}</span><span class="cat-label">${labelByKey[c.key] || c.key}</span></div>`;
   });
   root.innerHTML = html;
 
