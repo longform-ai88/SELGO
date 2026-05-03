@@ -2720,7 +2720,7 @@ function renderCategoryButtons(){
   if (activeCat && activeCat.subs.length > 0) {
     let subHtml = "";
     activeCat.subs.forEach(s => {
-      subHtml += `<button class="subcat-chip ${activeSubcat===s?"active":""}" type="button" data-sub="${s}" onclick="handleSubcatTap(this)">${s}</button>`;
+      subHtml += `<button class="subcat-chip ${activeSubcat===s?"active":""}" type="button" data-sub="${s}">${s}</button>`;
     });
     subRow.innerHTML = subHtml;
     subRow.style.display = "flex";
@@ -3766,6 +3766,25 @@ const loginBtn = document.getElementById("loginBtn");
 if (loginBtn) {
   loginBtn.addEventListener("click", () => login("username"));
 }
+
+// Touchend delegation on static .category-wrap for subcat chips (WKWebView reliable)
+const categoryWrapEl = document.querySelector(".category-wrap");
+if (categoryWrapEl) {
+  let _subcatTouchFired = false;
+  categoryWrapEl.addEventListener("touchend", function(e) {
+    const chip = e.target.closest(".subcat-chip");
+    if (!chip) return;
+    if (_subcatTouchFired) { _subcatTouchFired = false; return; }
+    _subcatTouchFired = true;
+    setTimeout(() => { _subcatTouchFired = false; }, 400);
+    const sub = chip.dataset.sub;
+    if (!sub) return;
+    activeSubcat = activeSubcat === sub ? null : sub;
+    renderCategoryButtons();
+    renderItems();
+  }, {passive: true});
+}
+
 updateSubcategoryOptions();
 updateFlowSubcategoryOptions();
 updatePaymentActionButtons();
