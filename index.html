@@ -1093,6 +1093,8 @@ min-width: 0;
 max-width: none !important;
 box-sizing: border-box;
 margin: 0 !important;
+touch-action: manipulation;
+-webkit-tap-highlight-color: transparent;
 }
 
 .cat-card:hover {
@@ -2130,6 +2132,8 @@ width: 146px;
       <div class="inline-row">
         <label><input id="flowBoost" type="checkbox"> Boost (kun bil)</label>
       </div>
+      <label for="flowImages" style="margin-top:10px;display:block;font-size:13px;color:rgba(240,220,160,0.85)">Bilder (minst 5)</label>
+      <input id="flowImages" type="file" accept="image/*" multiple style="margin-top:4px">
     </div>
 
     <div class="flow-panel" data-step="3">
@@ -2688,12 +2692,12 @@ function renderCategoryButtons(){
   let html = "";
   categoryOrder.forEach(key => {
     if (key === "ALL") {
-      html += `<div class="cat-card ${activeCategory==="ALL"?"active":""}" data-key="ALL"><span class="cat-icon">🏷️</span><span class="cat-label">${labelByKey.ALL}</span></div>`;
+      html += `<div class="cat-card ${activeCategory==="ALL"?"active":""}" data-key="ALL" onclick="handleCatCardTap(this)"><span class="cat-icon">🏷️</span><span class="cat-label">${labelByKey.ALL}</span></div>`;
       return;
     }
     const c = categoryItems.find(item => item.key === key);
     if (!c) return;
-    html += `<div class="cat-card ${activeCategory===c.key?"active":""}" data-key="${c.key}"><span class="cat-icon">${c.icon}</span><span class="cat-label">${labelByKey[c.key] || c.key}</span></div>`;
+    html += `<div class="cat-card ${activeCategory===c.key?"active":""}" data-key="${c.key}" onclick="handleCatCardTap(this)"><span class="cat-icon">${c.icon}</span><span class="cat-label">${labelByKey[c.key] || c.key}</span></div>`;
   });
   root.innerHTML = html;
 
@@ -2719,25 +2723,28 @@ function renderCategoryButtons(){
   }
 
   root.querySelectorAll(".cat-card").forEach(card => {
-    card.addEventListener("click", () => {
-      const key = card.dataset.key;
-      if (activeCategory === key) {
-        activeCategory = "ALL";
-        activeSubcat = null;
-      } else {
-        activeCategory = key;
-        activeSubcat = null;
-        if (key !== "ALL") {
-          document.getElementById("category").value = key;
-          document.getElementById("formHint").innerText = `Valgt kategori: ${key}. Fyll inn tekst og bilde, og publiser.`;
-        }
-      }
-      navigateToCategoryListings(activeCategory);
-      renderCategoryButtons();
-      renderPricingPreview();
-      renderItems();
-    });
+    card.addEventListener("click", () => handleCatCardTap(card));
   });
+}
+
+function handleCatCardTap(card) {
+  const key = card.dataset.key;
+  if (!key) return;
+  if (activeCategory === key) {
+    activeCategory = "ALL";
+    activeSubcat = null;
+  } else {
+    activeCategory = key;
+    activeSubcat = null;
+    if (key !== "ALL") {
+      document.getElementById("category").value = key;
+      document.getElementById("formHint").innerText = `Valgt kategori: ${key}. Fyll inn tekst og bilde, og publiser.`;
+    }
+  }
+  navigateToCategoryListings(activeCategory);
+  renderCategoryButtons();
+  renderPricingPreview();
+  renderItems();
 }
 
 function setLang(l){
@@ -2869,8 +2876,12 @@ async function createListingWithProvider(providerOverride = null){
   form.append("payment_provider", providerOverride || document.getElementById("paymentProvider").value);
 
   const imageInput = document.getElementById("image");
-  if (imageInput.files && imageInput.files.length > 0) {
-    for (const file of imageInput.files) {
+  const flowImageInput = document.getElementById("flowImages");
+  const imageFiles = (imageInput && imageInput.files && imageInput.files.length > 0)
+    ? imageInput.files
+    : (flowImageInput && flowImageInput.files && flowImageInput.files.length > 0 ? flowImageInput.files : null);
+  if (imageFiles && imageFiles.length > 0) {
+    for (const file of imageFiles) {
       form.append("images", file);
     }
   }
