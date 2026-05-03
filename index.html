@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23a259ff'/><stop offset='100%25' stop-color='%23ff6a00'/></linearGradient></defs><rect width='100' height='100' rx='22' fill='url(%23g)'/><text x='50' y='68' font-size='52' font-family='sans-serif' font-weight='900' fill='white' text-anchor='middle'>S</text></svg>">
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;600;700;800&display=swap');
 
 * {
 box-sizing: border-box;
@@ -15,11 +15,42 @@ box-sizing: border-box;
 
 body {
 font-family: "Manrope", "Segoe UI", sans-serif;
-background: radial-gradient(circle at 10% 10%, #d8ccff 0%, #e8e2ff 35%, #ddd6f5 100%);
+background:
+radial-gradient(circle at 8% 10%, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0) 34%),
+radial-gradient(circle at 92% 16%, rgba(14, 165, 233, 0.08) 0%, rgba(14, 165, 233, 0) 30%),
+linear-gradient(180deg, #f7f9fc 0%, #eef3f9 55%, #edf2f7 100%);
 padding: 88px 24px 24px;
 color: #102039;
 margin: 0;
 position: relative;
+overflow-x: hidden;
+}
+
+body::before {
+content: "";
+position: fixed;
+inset: 0;
+background:
+radial-gradient(1200px 520px at 50% -14%, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 68%),
+linear-gradient(120deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 48%),
+linear-gradient(0deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+background-size: auto, auto, 44px 44px, 44px 44px;
+background-position: 0 0, 0 0, -1px -1px, -1px -1px;
+pointer-events: none;
+opacity: 0.8;
+z-index: 0;
+}
+
+body::after {
+content: "";
+position: fixed;
+inset: 0;
+background:
+radial-gradient(circle at 16% 78%, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0) 36%),
+radial-gradient(circle at 88% 86%, rgba(30, 64, 175, 0.06) 0%, rgba(30, 64, 175, 0) 34%);
+pointer-events: none;
+z-index: 0;
 }
 
 .top-fixed-bar {
@@ -285,30 +316,33 @@ resize: vertical;
 
 .auth-tabs {
 display: flex;
-gap: 0;
-border-bottom: 2px solid #e5eaf2;
-margin-bottom: 16px;
+gap: 6px;
+padding: 4px;
+border: 1px solid #e5e7eb;
+background: rgba(248, 250, 252, 0.92);
+border-radius: 14px;
+margin-bottom: 24px;
 }
 
 .auth-tab {
 flex: 1;
-background: none;
+background: transparent;
 border: none;
-border-bottom: 3px solid transparent;
-margin: 0 0 -2px 0;
-padding: 10px 4px;
+margin: 0;
+padding: 11px 10px;
 font-size: 13px;
 font-weight: 700;
-color: #7a8fa8;
+color: #6b7280;
 cursor: pointer;
-border-radius: 0;
-transition: color 0.15s, border-color 0.15s;
+border-radius: 10px;
+transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 width: auto;
 }
 
 .auth-tab.active {
-color: #0d274f;
-border-bottom-color: #0d274f;
+color: #111827;
+background: #fff;
+box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .auth-pane { display: none; }
@@ -333,6 +367,28 @@ transition: background 0.15s;
 }
 
 .vipps-btn:hover { background: #e04c1a; }
+
+.vipps-secondary:disabled,
+.vipps-btn:disabled {
+opacity: 0.7;
+cursor: not-allowed;
+}
+
+.btn-spinner {
+display: inline-block;
+width: 15px;
+height: 15px;
+border: 2px solid rgba(255, 255, 255, 0.35);
+border-top-color: #fff;
+border-radius: 50%;
+animation: spin 0.8s linear infinite;
+vertical-align: middle;
+margin-right: 8px;
+}
+
+@keyframes spin {
+to { transform: rotate(360deg); }
+}
 
 .vipps-logo {
 font-size: 18px;
@@ -390,6 +446,399 @@ text-align: center;
 color: #9baabf;
 font-size: 12px;
 margin: 10px 0 4px;
+}
+
+#authPanel {
+width: min(420px, 100%);
+margin: 28px auto 20px;
+padding: 32px;
+border-radius: 16px;
+border: 1px solid rgba(226, 232, 240, 0.95);
+background: rgba(255, 255, 255, 0.9);
+backdrop-filter: blur(16px);
+box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+overflow: hidden;
+}
+
+#addPanel {
+width: min(420px, 100%);
+margin: 0 auto 20px;
+padding: 32px;
+border-radius: 16px;
+border: 1px solid rgba(226, 232, 240, 0.95);
+background: rgba(255, 255, 255, 0.9);
+backdrop-filter: blur(16px);
+box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+display: none;
+}
+
+#addPanel h2 {
+margin: 0;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 30px;
+font-weight: 800;
+line-height: 1.1;
+color: #111827;
+}
+
+.new-listing-subtitle {
+margin: 8px 0 20px;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 14px;
+line-height: 1.6;
+color: #64748b;
+}
+
+#addPanel .form-grid {
+grid-template-columns: 1fr;
+gap: 14px;
+}
+
+#addPanel input,
+#addPanel select,
+#addPanel textarea,
+#listingFlowModal input,
+#listingFlowModal select,
+#listingFlowModal textarea {
+margin: 0;
+padding: 13px 14px;
+border-radius: 10px;
+border: 1px solid #e5e7eb;
+background: rgba(255, 255, 255, 0.98);
+color: #111827;
+font-family: "Inter", "Segoe UI", sans-serif;
+box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02);
+transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+#addPanel input::placeholder,
+#addPanel textarea::placeholder,
+#listingFlowModal input::placeholder,
+#listingFlowModal textarea::placeholder {
+color: #9ca3af;
+}
+
+#addPanel input:hover,
+#addPanel select:hover,
+#addPanel textarea:hover,
+#listingFlowModal input:hover,
+#listingFlowModal select:hover,
+#listingFlowModal textarea:hover {
+border-color: #cbd5e1;
+}
+
+#addPanel input:focus,
+#addPanel select:focus,
+#addPanel textarea:focus,
+#listingFlowModal input:focus,
+#listingFlowModal select:focus,
+#listingFlowModal textarea:focus {
+outline: none;
+border-color: #2563eb;
+box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+#addPanel button,
+#listingFlowModal button {
+font-family: "Inter", "Segoe UI", sans-serif;
+transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+#addPanel button:hover,
+#listingFlowModal button:hover {
+transform: translateY(-1px);
+}
+
+#addPanel #addBtn {
+background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+}
+
+#addPanel #addBtn:hover {
+background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+box-shadow: 0 18px 30px rgba(29, 78, 216, 0.28);
+}
+
+#listingFlowModal .listing-modal {
+width: min(420px, 100%);
+padding: 32px;
+border-radius: 16px;
+border: 1px solid rgba(226, 232, 240, 0.95);
+background: rgba(255, 255, 255, 0.9);
+backdrop-filter: blur(16px);
+box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+}
+
+#listingFlowModal .listing-modal h3 {
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 28px;
+font-weight: 800;
+line-height: 1.1;
+color: #111827;
+}
+
+#listingFlowModal .flow-steps {
+margin-bottom: 18px;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 12px;
+font-weight: 700;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+color: #2563eb;
+}
+
+#listingFlowModal .flow-panel label {
+display: block;
+margin-bottom: 8px;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 12px;
+font-weight: 600;
+color: #6b7280;
+}
+
+#listingFlowModal .flow-panel {
+display: none;
+gap: 12px;
+}
+
+#listingFlowModal .flow-panel.active {
+display: grid;
+}
+
+#listingFlowModal .flow-actions {
+margin-top: 18px;
+}
+
+#listingFlowModal .flow-actions button {
+flex: 1;
+min-width: 0;
+}
+
+#authPanel::before {
+content: "";
+position: absolute;
+top: -72px;
+right: -48px;
+width: 180px;
+height: 180px;
+border-radius: 999px;
+background: radial-gradient(circle, rgba(37, 99, 235, 0.14) 0%, rgba(37, 99, 235, 0) 72%);
+pointer-events: none;
+}
+
+.auth-card-header {
+position: relative;
+z-index: 1;
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+gap: 10px;
+margin-bottom: 24px;
+}
+
+.auth-logo {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 44px;
+height: 44px;
+border-radius: 14px;
+background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+color: #fff;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 19px;
+font-weight: 800;
+box-shadow: 0 14px 26px rgba(37, 99, 235, 0.22);
+}
+
+.auth-eyebrow {
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 12px;
+font-weight: 700;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+color: #2563eb;
+}
+
+.auth-title {
+margin: 0;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 32px;
+font-weight: 800;
+line-height: 1.1;
+color: #111827;
+}
+
+.auth-subtitle {
+margin: 0;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 14px;
+line-height: 1.6;
+color: #64748b;
+}
+
+#authPanel .auth-pane {
+position: relative;
+z-index: 1;
+animation: fadeIn 0.2s ease;
+}
+
+.field {
+margin-bottom: 18px;
+}
+
+.field label {
+display: block;
+margin-bottom: 7px;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 12px;
+font-weight: 600;
+color: #6b7280;
+}
+
+#authPanel input,
+#authPanel select,
+#authPanel button {
+font-family: "Inter", "Segoe UI", sans-serif;
+transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+#authPanel input,
+#authPanel select {
+margin: 0;
+padding: 13px 14px;
+border-radius: 10px;
+border: 1px solid #e5e7eb;
+background: rgba(255, 255, 255, 0.98);
+color: #111827;
+box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+#authPanel input::placeholder {
+color: #9ca3af;
+}
+
+#authPanel input:hover,
+#authPanel select:hover {
+border-color: #cbd5e1;
+}
+
+#authPanel input:focus,
+#authPanel select:focus {
+outline: none;
+border-color: #2563eb;
+box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+.auth-actions {
+display: grid;
+gap: 12px;
+margin-top: 4px;
+}
+
+#authPanel button {
+margin: 0;
+padding: 14px 16px;
+border-radius: 10px;
+font-size: 14px;
+font-weight: 700;
+}
+
+#authPanel button:hover {
+transform: translateY(-1px);
+}
+
+#authPanel button:focus-visible {
+outline: none;
+box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.16);
+}
+
+#authPanel #loginBtn,
+#authPanel #mobileLoginBtn {
+background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+}
+
+#authPanel #loginBtn:hover,
+#authPanel #mobileLoginBtn:hover {
+background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+box-shadow: 0 18px 30px rgba(29, 78, 216, 0.28);
+}
+
+#authPanel .ghost {
+background: #fff;
+color: #1f2937;
+border: 1px solid #d1d5db;
+box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+#authPanel .ghost:hover {
+background: #f8fafc;
+border-color: #94a3b8;
+box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+}
+
+#authPanel .vipps-secondary,
+#authPanel .vipps-btn {
+background: linear-gradient(135deg, #ff5b24 0%, #ff3b0f 100%);
+border: none;
+color: #fff;
+box-shadow: 0 14px 28px rgba(255, 91, 36, 0.22);
+}
+
+#authPanel .vipps-secondary:hover,
+#authPanel .vipps-btn:hover {
+background: linear-gradient(135deg, #f0521d 0%, #d93b11 100%);
+box-shadow: 0 18px 30px rgba(217, 59, 17, 0.24);
+}
+
+#authPanel .vipps-btn {
+margin-top: 0;
+}
+
+.auth-secondary-note {
+margin: 2px 0 -2px;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 12px;
+font-weight: 600;
+text-align: center;
+color: #94a3b8;
+}
+
+.auth-vipps-divider {
+display: flex;
+align-items: center;
+gap: 12px;
+margin: 4px 0;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 12px;
+font-weight: 600;
+color: #94a3b8;
+text-transform: uppercase;
+letter-spacing: 0.08em;
+}
+
+.auth-vipps-divider::before,
+.auth-vipps-divider::after {
+content: "";
+flex: 1;
+height: 1px;
+background: linear-gradient(90deg, rgba(226, 232, 240, 0), rgba(226, 232, 240, 1), rgba(226, 232, 240, 0));
+}
+
+.auth-login-error {
+display: none;
+margin-top: 4px;
+padding: 10px 12px;
+border-radius: 10px;
+font-family: "Inter", "Segoe UI", sans-serif;
+font-size: 13px;
+font-weight: 600;
+}
+
+#logoutBtn {
+width: min(420px, 100%);
+margin: 0 auto 20px;
 }
 
 .lang-switch {
@@ -691,12 +1140,6 @@ margin-top: 0;
 margin-bottom: 8px;
 }
 
-.top-cta-bar {
-text-align: center;
-margin-bottom: 22px;
-padding-top: 8px;
-}
-
 .main-title {
 display: flex;
 align-items: baseline;
@@ -846,6 +1289,20 @@ grid-template-columns: 1fr;
 .main-title h1 {
 font-size: 30px;
 }
+
+#authPanel {
+padding: 24px;
+margin-top: 20px;
+}
+
+#addPanel,
+#listingFlowModal .listing-modal {
+padding: 24px;
+}
+
+.auth-title {
+font-size: 28px;
+}
 }
 </style>
 </head>
@@ -883,10 +1340,6 @@ font-size: 30px;
 <button onclick="setLang('en')">EN</button>
 </div>
 
-<div class="top-cta-bar">
-  <button class="post-cta" type="button" onclick="openListingFlow()">+ Legg ut annonse</button>
-</div>
-
 <div class="page-layout">
 
 <div class="ai-assistant">
@@ -909,16 +1362,23 @@ font-size: 30px;
 </div>
 <p id="welcome" class="subtitle"></p>
 
+<h2 id="listTitle"></h2>
+<div id="itemsContainer"></div>
+
 <div class="category-wrap">
 <h2 id="catTitle"></h2>
 <div class="category-grid" id="categoryButtons"></div>
 <div class="subcat-row" id="subcatRow" style="display:none"></div>
 </div>
 
-<h2 id="listTitle"></h2>
-<div id="itemsContainer"></div>
-
 <div class="panel" id="authPanel">
+
+<div class="auth-card-header">
+  <div class="auth-logo" aria-hidden="true">S</div>
+  <div class="auth-eyebrow">SELGA konto</div>
+  <h2 class="auth-title">Logg inn / Registrer</h2>
+  <p class="auth-subtitle">Få tilgang til annonser, meldinger og publisering i ett rent og trygt steg.</p>
+</div>
 
 <div class="auth-tabs">
   <button class="auth-tab active" onclick="switchAuthTab('username',this)">Brukernavn</button>
@@ -928,47 +1388,87 @@ font-size: 30px;
 
 <!-- Brukernavn-pane -->
 <div class="auth-pane active" id="pane-username">
-  <input id="fullName" placeholder="Fullt navn (vises for kjøpere)">
-  <input id="username" placeholder="Brukernavn">
-  <input id="password" type="password" placeholder="Passord">
-  <select id="sellerType">
-    <option value="privat">Selgertype: Privat</option>
-    <option value="naering">Selgertype: Næring</option>
-  </select>
-  <input id="companyName" placeholder="Firmanavn (kun for næring)">
-  <input id="inviteCode" placeholder="Invitasjonskode (valgfritt)" autocomplete="off">
-  <button id="loginBtn">Logg inn</button>
-  <button onclick="register('username')" id="registerBtn" class="ghost">Registrer ny bruker</button>
+  <div class="field">
+    <label for="fullName">Fullt navn</label>
+    <input id="fullName" placeholder="Navnet som vises for kjøpere" autocomplete="name">
+  </div>
+  <div class="field">
+    <label for="username">Brukernavn</label>
+    <input id="username" placeholder="Skriv inn brukernavn" autocomplete="username">
+  </div>
+  <div class="field">
+    <label for="password">Passord</label>
+    <input id="password" type="password" placeholder="Skriv inn passord" autocomplete="current-password">
+  </div>
+  <div class="field">
+    <label for="sellerType">Selgertype</label>
+    <select id="sellerType">
+      <option value="privat">Privat</option>
+      <option value="naering">Næring</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="companyName">Firmanavn</label>
+    <input id="companyName" placeholder="Kun for næring" autocomplete="organization">
+  </div>
+  <div class="field">
+    <label for="inviteCode">Invitasjonskode</label>
+    <input id="inviteCode" placeholder="Valgfritt" autocomplete="off">
+  </div>
+  <div class="auth-actions">
+    <button id="loginBtn">Logg inn</button>
+    <div class="auth-secondary-note">Ny hos SELGA?</div>
+    <button onclick="register('username')" id="registerBtn" class="ghost">Registrer ny bruker</button>
+    <div class="auth-vipps-divider">Eller bruk Vipps</div>
     <button type="button" class="vipps-secondary" onclick="continueWithVipps()">Fortsett med Vipps</button>
-  <div id="loginError" style="display:none;margin-top:8px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:600"></div>
+  </div>
+  <div id="loginError" class="auth-login-error"></div>
 </div>
 
 <!-- Mobilnummer-pane -->
 <div class="auth-pane" id="pane-mobile">
-  <input id="mobileFullName" placeholder="Fullt navn (vises for kjøpere)">
-  <input id="phoneInput" type="tel" placeholder="Mobilnummer (f.eks. 98765432)" maxlength="20">
-  <input id="phonePassword" type="password" placeholder="Velg passord">
-  <input id="mobileInviteCode" placeholder="Invitasjonskode (valgfritt)" autocomplete="off">
-  <button type="button" id="mobileLoginBtn" onclick="login('mobile')">Logg inn med mobil</button>
-  <button type="button" id="mobileRegisterBtn" onclick="register('mobile')" class="ghost">Registrer med mobilnummer</button>
+  <div class="field">
+    <label for="mobileFullName">Fullt navn</label>
+    <input id="mobileFullName" placeholder="Navnet som vises for kjøpere" autocomplete="name">
+  </div>
+  <div class="field">
+    <label for="phoneInput">Mobilnummer</label>
+    <input id="phoneInput" type="tel" placeholder="For eksempel 98765432" maxlength="20" autocomplete="tel">
+  </div>
+  <div class="field">
+    <label for="phonePassword">Passord</label>
+    <input id="phonePassword" type="password" placeholder="Velg passord" autocomplete="new-password">
+  </div>
+  <div class="field">
+    <label for="mobileInviteCode">Invitasjonskode</label>
+    <input id="mobileInviteCode" placeholder="Valgfritt" autocomplete="off">
+  </div>
+  <div class="auth-actions">
+    <button type="button" id="mobileLoginBtn" onclick="login('mobile')">Logg inn med mobil</button>
+    <div class="auth-secondary-note">Ny hos SELGA?</div>
+    <button type="button" id="mobileRegisterBtn" onclick="register('mobile')" class="ghost">Registrer med mobilnummer</button>
+  </div>
 </div>
 
 <!-- Vipps-pane -->
 <div class="auth-pane" id="pane-vipps">
-  <p style="font-size:13px;color:#4a5872;margin:4px 0 10px">Logg inn eller registrer deg raskt og trygt med Vipps.</p>
-  <button class="vipps-btn" onclick="loginWithVipps()">
-    <span class="vipps-logo">Vipps</span>
-    <span>Logg inn med Vipps</span>
-  </button>
-  <p id="vippsStatus" style="font-size:12px;color:#e05000;margin-top:8px;display:none"></p>
+  <p class="auth-subtitle" style="margin:0 0 18px">Logg inn eller registrer deg raskt og trygt med Vipps, uten ekstra steg.</p>
+  <div class="auth-actions">
+    <button class="vipps-btn" onclick="loginWithVipps()">
+      <span class="vipps-logo">Vipps</span>
+      <span>Logg inn med Vipps</span>
+    </button>
+  </div>
+  <p id="vippsStatus" style="font-size:12px;color:#e05000;margin-top:12px;display:none"></p>
 </div>
 
 </div>
 
 <button onclick="logout()" id="logoutBtn" class="ghost" style="display:none">Logg ut</button>
 
-<div class="panel">
+<div class="panel" id="addPanel">
 <h2 id="addTitle"></h2>
+<p class="new-listing-subtitle">Publiser annonsen din med samme rene og moderne flyt som innloggingen.</p>
 <div class="form-grid">
 <input id="title" class="full" placeholder="Tittel (f.eks. Tesla Model 3 2021)">
 <textarea id="desc" class="full" placeholder="Skriv en tydelig beskrivelse av varen..."></textarea>
@@ -1672,6 +2172,34 @@ function showPublishStatus(message, isError=false, includeConfirm=false){
   el.style.display = "block";
 }
 
+function setPayButtonLoading(isLoading, label = "Betal med Vipps") {
+  const payBtn = document.getElementById("payBtn");
+  if (!payBtn) return;
+  if (isLoading) {
+    payBtn.disabled = true;
+    payBtn.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span>Behandler betaling...`;
+    return;
+  }
+  payBtn.disabled = false;
+  payBtn.textContent = label;
+}
+
+function showPaymentResult(type, detail = "") {
+  const el = document.getElementById("publishStatus");
+  if (!el) return;
+
+  if (type === "success") {
+    el.style.borderColor = "#4CAF50";
+    el.style.background = "#f0fff4";
+    el.innerHTML = `<div style="text-align:center;padding:12px 0"><div style="font-size:28px">✅</div><div style="font-size:18px;font-weight:700;color:#1a4a2e">Betaling fullført ✅</div><div style="font-size:13px;color:#34553f;margin-top:6px">Annonsen er aktiv.</div></div>`;
+  } else {
+    el.style.borderColor = "#efc0c0";
+    el.style.background = "#fff3f3";
+    el.innerHTML = `<div style="text-align:center;padding:12px 0"><div style="font-size:26px">⚠️</div><div style="font-size:17px;font-weight:700;color:#7a1f1f">Betaling feilet</div><div style="font-size:13px;color:#8a3333;margin-top:6px">${detail || "Prøv igjen eller velg en annen betalingsmetode."}</div></div>`;
+  }
+  el.style.display = "block";
+}
+
 function showPaymentConfirmation(confirmationNumber){
   const el = document.getElementById("publishStatus");
   if (!el) return;
@@ -1679,8 +2207,9 @@ function showPaymentConfirmation(confirmationNumber){
   el.style.background = "#f0fff4";
   el.innerHTML = `
     <div style="text-align:center;padding:12px 0">
-      <div style="font-size:28px;color:#4CAF50">&#10003;</div>
-      <div style="font-size:17px;font-weight:700;color:#1a4a2e;margin:4px 0">Betaling mottatt &ndash; annonsen er n&aring; aktiv!</div>
+      <div style="font-size:28px;color:#4CAF50">✅</div>
+      <div style="font-size:17px;font-weight:700;color:#1a4a2e;margin:4px 0">Betaling fullf&oslash;rt ✅</div>
+      <div style="font-size:14px;color:#2f5a41;margin-bottom:4px">Annonsen er n&aring; aktiv.</div>
       <div style="font-size:13px;color:#555;margin-top:6px">Ditt betalingsreferansenummer:</div>
       <div style="font-size:20px;font-weight:800;color:#1a4a2e;letter-spacing:2px;margin:6px 0">${confirmationNumber}</div>
       <div style="font-size:12px;color:#777">Ta vare p&aring; dette nummeret som kvittering for betalingen.</div>
@@ -2193,32 +2722,57 @@ fetchItems();
 async function handlePayment(method) {
   const selectedMethod = method || document.getElementById("paymentProvider")?.value || "stripe";
   const fee = calculatePrice(document.getElementById("price").value, document.getElementById("category").value);
+  const payLabel = selectedMethod === "vipps" ? "Betal med Vipps" : "Betal med Stripe";
   if (fee <= 0) {
     await addItem();
     return;
   }
 
   if (selectedMethod === "vipps") {
-    const created = await createListingWithProvider("vipps");
-    const data = created.data || {};
-    if (!created.ok) {
-      showPublishStatus(data.detail || "Kunne ikke opprette annonse for Vipps betaling.", true);
-      return;
-    }
+    let redirected = false;
+    setPayButtonLoading(true, payLabel);
+    showPublishStatus("Starter Vipps-betaling...", false);
+    try {
+      const created = await createListingWithProvider("vipps");
+      const data = created.data || {};
+      if (!created.ok) {
+        showPaymentResult("error", data.detail || "Kunne ikke opprette annonse for Vipps-betaling.");
+        return;
+      }
 
-    if (!data.payment_required) {
-      showPublishStatus("Annonse publisert og aktiv.");
-      fetchItems();
-      return;
-    }
+      if (!data.payment_required) {
+        showPublishStatus("Annonse publisert og aktiv.");
+        fetchItems();
+        return;
+      }
 
-    latestPendingOrderId = data.payment_order_id;
-    const amountNok = data.fee_nok || fee;
-    const amountEl = document.getElementById("vippsAmountDisplay");
-    if (amountEl) amountEl.textContent = `${amountNok} kr`;
-    const box = document.getElementById("vippsManualBox");
-    if (box) box.style.display = "block";
-    showPublishStatus(`Betal ${amountNok} kr til Vipps 40315139, trykk deretter knappen under.`, false, true);
+      latestPendingOrderId = data.payment_order_id;
+
+      const token = localStorage.getItem("token");
+      const vippsForm = new FormData();
+      vippsForm.append("order_id", String(data.payment_order_id));
+
+      const vippsRes = await fetch(API + "/vipps/create-order", {
+        method: "POST",
+        headers: {"Authorization": "Bearer " + token},
+        body: vippsForm
+      });
+
+      const vippsData = await vippsRes.json().catch(()=>({}));
+      if (!vippsRes.ok || !vippsData.checkout_url) {
+        showPaymentResult("error", vippsData.detail || "Kunne ikke starte Vipps-betaling.");
+        return;
+      }
+
+      redirected = true;
+      window.location.href = vippsData.checkout_url;
+    } catch (_) {
+      showPaymentResult("error", "Nettverksfeil under betaling. Prøv igjen.");
+    } finally {
+      if (!redirected) {
+        setPayButtonLoading(false, payLabel);
+      }
+    }
     return;
   }
 
@@ -2315,16 +2869,7 @@ async function restoreLatestPendingPaymentOrder() {
     if (!order || !order.id) return;
 
     latestPendingOrderId = order.id;
-    if (order.provider === "vipps") {
-      latestPendingOrderId = order.id;
-      const amountEl = document.getElementById("vippsAmountDisplay");
-      if (amountEl) amountEl.textContent = `${order.amount || "?"} kr`;
-      const box = document.getElementById("vippsManualBox");
-      if (box) box.style.display = "block";
-      showPublishStatus(`Betal ${order.amount || "?"} kr til Vipps 40315139, trykk deretter knappen under.`, false, true);
-    } else {
-      showPublishStatus(`Du har en ventende betaling (${order.amount || "?"} NOK). Fullfor betalingen for a aktivere annonsen.`, false, true);
-    }
+    showPublishStatus(`Du har en ventende betaling (${order.amount || "?"} NOK). Fullfor betalingen for a aktivere annonsen.`, false, false);
   } catch (_) {
     // Ignore restore errors to avoid blocking app startup.
   }
@@ -2333,9 +2878,69 @@ async function restoreLatestPendingPaymentOrder() {
 async function handleStripeReturn() {
   const params = new URLSearchParams(window.location.search);
   const payment = params.get("payment");
+  const provider = params.get("provider") || "";
   const orderId = Number(params.get("order_id") || 0);
   const listingId = Number(params.get("listing_id") || 0);
   const sessionId = params.get("session_id") || "";
+  const vippsReference = params.get("reference") || "";
+
+  if (provider === "vipps" && payment === "success") {
+    if (orderId > 0) {
+      latestPendingOrderId = orderId;
+      const result = await confirmPaymentOrderById(orderId, vippsReference || "vipps_verified_return");
+      if (result.ok) {
+        const confirmData = result.data || {};
+        showPaymentResult("success");
+        if (confirmData.confirmation_number) {
+          showPaymentConfirmation(confirmData.confirmation_number);
+        }
+        fetchItems();
+      } else {
+        const data = result.data || {};
+        showPaymentResult("error", data.detail || "Kunne ikke bekrefte Vipps-betaling.");
+      }
+    }
+    params.delete("payment");
+    params.delete("provider");
+    params.delete("order_id");
+    params.delete("reference");
+    const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+    window.history.replaceState({}, "", next);
+    return;
+  }
+
+  if (provider === "vipps" && payment === "failed") {
+    showPaymentResult("error", "Vipps-betalingen ble avbrutt eller feilet.");
+    params.delete("payment");
+    params.delete("provider");
+    params.delete("order_id");
+    params.delete("reference");
+    const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+    window.history.replaceState({}, "", next);
+    return;
+  }
+
+  if (provider === "vipps" && payment === "timeout") {
+    showPaymentResult("error", "Vipps-betalingen fikk timeout. Prøv igjen.");
+    params.delete("payment");
+    params.delete("provider");
+    params.delete("order_id");
+    params.delete("reference");
+    const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+    window.history.replaceState({}, "", next);
+    return;
+  }
+
+  if (provider === "vipps" && payment === "pending") {
+    showPublishStatus("Vipps-betaling behandles fortsatt. Vi oppdaterer når webhook er mottatt.", false);
+    params.delete("payment");
+    params.delete("provider");
+    params.delete("order_id");
+    params.delete("reference");
+    const next = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+    window.history.replaceState({}, "", next);
+    return;
+  }
 
   if (payment === "success") {
     const token = localStorage.getItem("token");
@@ -2419,9 +3024,9 @@ return;
 }
 
 const form = new FormData();
-form.append("item_id", itemId);
+form.append("order_id", itemId);
 
-const res = await fetch(API + "/payments/vipps/create-order", {
+const res = await fetch(API + "/vipps/create-order", {
 method: "POST",
 headers: {"Authorization": "Bearer " + token},
 body: form

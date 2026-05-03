@@ -1,5 +1,5 @@
 # === SAME IMPORTS (unchanged) ===
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import FileResponse, RedirectResponse
@@ -13,13 +13,17 @@ from uuid import uuid4
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from routes.vippsRoutes import build_vipps_router
+from services.vippsService import getPaymentStatus, isFailedState, isPaidState, isTimeoutState
 import os
 import urllib.parse
 import urllib.request
 import urllib.error
 import json
 import secrets
+import base64
+import time
 
 app = FastAPI()
 app.add_middleware(
@@ -94,8 +98,32 @@ VIPPS_REDIRECT_URI = os.getenv(
     "https://selga.no/auth/vipps/callback"
 )
 
+VIPPS_LOGIN_DISCOVERY_URL = os.getenv(
+    "VIPPS_LOGIN_DISCOVERY_URL",
+    "https://apitest.vipps.no/access-management-1.0/access/.well-known/openid-configuration",
+)
+VIPPS_CLIENT_ID = os.getenv("VIPPS_CLIENT_ID", "")
+VIPPS_CLIENT_SECRET = os.getenv("VIPPS_CLIENT_SECRET", "")
+VIPPS_LOGIN_SCOPE = os.getenv("VIPPS_LOGIN_SCOPE", "openid name phoneNumber")
+VIPPS_LOGIN_SUCCESS_REDIRECT = os.getenv("VIPPS_LOGIN_SUCCESS_REDIRECT", "/app")
+
+VIPPS_MERCHANT_SERIAL_NUMBER = os.getenv("VIPPS_MERCHANT_SERIAL_NUMBER", "")
+VIPPS_SUBSCRIPTION_KEY = os.getenv("VIPPS_SUBSCRIPTION_KEY", "")
+VIPPS_EPAYMENT_API_BASE = os.getenv("VIPPS_EPAYMENT_API_BASE", "https://apitest.vipps.no")
+VIPPS_PAYMENT_SCOPE = os.getenv("VIPPS_PAYMENT_SCOPE", "ePayment")
+VIPPS_PAYMENT_RETURN_URL = os.getenv("VIPPS_PAYMENT_RETURN_URL", "")
+
+VIPPS_SYSTEM_NAME = os.getenv("VIPPS_SYSTEM_NAME", "selga-backend")
+VIPPS_SYSTEM_VERSION = os.getenv("VIPPS_SYSTEM_VERSION", "1.0.0")
+VIPPS_SYSTEM_PLUGIN_NAME = os.getenv("VIPPS_SYSTEM_PLUGIN_NAME", "selga")
+VIPPS_SYSTEM_PLUGIN_VERSION = os.getenv("VIPPS_SYSTEM_PLUGIN_VERSION", "1.0.0")
+
+VIPPS_LOGIN_STATES: Dict[str, Dict[str, Any]] = {}
+VIPPS_STATE_TTL_SECONDS = 600
+
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth = OAuth2PasswordBearer(tokenUrl="login")
+app.include_router(build_vipps_router(oauth, SECRET, ALGO, APP_BASE_URL))
 
 
 def normalize_payment_provider(provider: Optional[str]) -> str:
@@ -122,6 +150,77 @@ def calculate_listing_fee_nok(price: float, category: Optional[str], listing_mod
     if amount <= 9999:
         return 199.0
     return 299.0
+
+
+def _vipps_cleanup_old_states():
+    now = int(time.time())
+    stale = [k for k, v in VIPPS_LOGIN_STATES.items() if now - int(v.get("created_at", 0)) > VIPPS_STATE_TTL_SECONDS]
+    for key in stale:
+        VIPPS_LOGIN_STATES.pop(key, None)
+
+
+def _vipps_require_login_config():
+    if not VIPPS_CLIENT_ID or not VIPPS_CLIENT_SECRET:
+        raise HTTPException(503, "Vipps Login er ikke konfigurert")
+
+
+def _http_json_request(url: str, method: str = "GET", headers: Optional[Dict[str, str]] = None, body: Optional[bytes] = None, timeout: int = 20) -> Dict[str, Any]:
+    req = urllib.request.Request(url=url, data=body, method=method)
+    for k, v in (headers or {}).items():
+        req.add_header(k, v)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8")
+            if not raw:
+                return {}
+            return json.loads(raw)
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8") if hasattr(e, "read") else ""
+        detail = raw
+        try:
+            parsed = json.loads(raw) if raw else {}
+            detail = parsed.get("message") or parsed.get("detail") or raw
+        except Exception:
+            pass
+        raise HTTPException(e.code, f"Vipps API-feil: {detail}")
+    except urllib.error.URLError as e:
+        raise HTTPException(502, f"Nettverksfeil mot Vipps: {e.reason}")
+
+
+def _vipps_get_discovery() -> Dict[str, Any]:
+    return _http_json_request(VIPPS_LOGIN_DISCOVERY_URL)
+
+
+def _vipps_basic_auth_header() -> str:
+    value = f"{VIPPS_CLIENT_ID}:{VIPPS_CLIENT_SECRET}".encode("utf-8")
+    return "Basic " + base64.b64encode(value).decode("ascii")
+
+
+def _vipps_exchange_auth_code(code: str, token_endpoint: str) -> Dict[str, Any]:
+    body = urllib.parse.urlencode(
+        {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": VIPPS_REDIRECT_URI,
+        }
+    ).encode("utf-8")
+    return _http_json_request(
+        token_endpoint,
+        method="POST",
+        headers={
+            "Authorization": _vipps_basic_auth_header(),
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body=body,
+    )
+
+
+def _vipps_get_userinfo(userinfo_endpoint: str, access_token: str) -> Dict[str, Any]:
+    return _http_json_request(
+        userinfo_endpoint,
+        method="GET",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
 
 # === DB ===
 def get_db():
@@ -197,15 +296,103 @@ def login(
 
     return {"access_token": create_token(user.username)}
 
-# === VIPPS ===
+# === VIPPS LOGIN (OIDC) ===
 @app.get("/auth/vipps/url")
-def vipps_auth_url():
-    return {"url": "https://vipps.no"}  # placeholder
+def vipps_auth_url(state: Optional[str] = None, return_to: Optional[str] = None):
+    _vipps_require_login_config()
+    _vipps_cleanup_old_states()
+
+    discovery = _vipps_get_discovery()
+    auth_endpoint = discovery.get("authorization_endpoint")
+    if not auth_endpoint:
+        raise HTTPException(502, "Mangler authorization_endpoint i Vipps discovery")
+
+    server_state = secrets.token_urlsafe(24)
+    nonce = secrets.token_urlsafe(24)
+    VIPPS_LOGIN_STATES[server_state] = {
+        "created_at": int(time.time()),
+        "client_state": state,
+        "return_to": return_to,
+        "nonce": nonce,
+    }
+
+    query = {
+        "client_id": VIPPS_CLIENT_ID,
+        "response_type": "code",
+        "scope": VIPPS_LOGIN_SCOPE,
+        "redirect_uri": VIPPS_REDIRECT_URI,
+        "state": server_state,
+        "nonce": nonce,
+    }
+
+    url = auth_endpoint + "?" + urllib.parse.urlencode(query)
+    return {"url": url}
+
 
 @app.get("/auth/vipps/callback")
-def vipps_callback():
-    frontend_url = "https://selga.no/app"
-    return RedirectResponse(frontend_url)
+def vipps_callback(code: Optional[str] = None, state: Optional[str] = None, error: Optional[str] = None, db: Session = Depends(get_db)):
+    target = VIPPS_LOGIN_SUCCESS_REDIRECT or "/app"
+
+    if error:
+        sep = "&" if "?" in target else "?"
+        return RedirectResponse(f"{target}{sep}vipps_error=1")
+
+    if not code or not state:
+        raise HTTPException(400, "Mangler code/state fra Vipps")
+
+    state_data = VIPPS_LOGIN_STATES.pop(state, None)
+    if not state_data:
+        raise HTTPException(400, "Ugyldig eller utløpt Vipps state")
+
+    discovery = _vipps_get_discovery()
+    token_endpoint = discovery.get("token_endpoint")
+    userinfo_endpoint = discovery.get("userinfo_endpoint")
+    if not token_endpoint or not userinfo_endpoint:
+        raise HTTPException(502, "Ufullstendig Vipps OIDC discovery")
+
+    token_data = _vipps_exchange_auth_code(code, token_endpoint)
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise HTTPException(502, "Fikk ikke access token fra Vipps Login")
+
+    profile = _vipps_get_userinfo(userinfo_endpoint, access_token)
+    vipps_sub = profile.get("sub")
+    full_name = profile.get("name")
+    phone = profile.get("phone_number") or profile.get("phoneNumber")
+    if not vipps_sub:
+        raise HTTPException(502, "Mangler sub i Vipps userinfo")
+
+    user = db.query(UserDB).filter(UserDB.vipps_sub == vipps_sub).first()
+    if not user and phone:
+        user = db.query(UserDB).filter(UserDB.phone == phone).first()
+
+    if not user:
+        phone_tail = (phone or "000000")[-6:]
+        generated_username = f"vipps_{phone_tail}_{secrets.token_hex(2)}"
+        user = UserDB(
+            username=generated_username,
+            password=pwd.hash(secrets.token_urlsafe(24)),
+            full_name=full_name,
+            phone=phone,
+            vipps_sub=vipps_sub,
+            is_verified=bool(phone),
+        )
+        db.add(user)
+    else:
+        user.vipps_sub = vipps_sub
+        if phone and not user.phone:
+            user.phone = phone
+        if full_name and not user.full_name:
+            user.full_name = full_name
+        if phone:
+            user.is_verified = True
+
+    db.commit()
+    auth_token = create_token(user.username)
+
+    redirect_base = state_data.get("return_to") or target
+    sep = "&" if "?" in redirect_base else "?"
+    return RedirectResponse(f"{redirect_base}{sep}token={urllib.parse.quote(auth_token)}")
 
 # === LISTINGS (MINIMAL SAFE) ===
 @app.get("/listings")
@@ -408,7 +595,7 @@ def latest_pending_payment_order(token: str = Depends(oauth), db: Session = Depe
         db.query(PaymentOrderDB)
         .filter(
             PaymentOrderDB.buyer_username == user.username,
-            PaymentOrderDB.status == "created",
+            PaymentOrderDB.status.in_(["created", "initiated"]),
         )
         .order_by(PaymentOrderDB.id.desc())
         .first()
@@ -458,7 +645,30 @@ def confirm_payment_order(
     if not owner:
         raise HTTPException(403, "Du eier ikke denne annonsen")
 
-    if order.status != "paid":
+    if order.provider == "vipps":
+        reference = (provider_reference or order.provider_reference or "").strip()
+        if not reference:
+            raise HTTPException(400, "Mangler Vipps-referanse for verifisering")
+
+        status_data = getPaymentStatus(reference)
+        state = status_data["state"]
+
+        if isPaidState(state):
+            order.status = "paid"
+            order.provider_reference = reference[:120]
+        elif isFailedState(state):
+            order.status = "failed"
+            db.commit()
+            raise HTTPException(409, "Vipps-betaling feilet eller ble avbrutt")
+        elif isTimeoutState(state):
+            order.status = "timeout"
+            db.commit()
+            raise HTTPException(408, "Vipps-betaling utløpt")
+        else:
+            order.status = "pending"
+            db.commit()
+            raise HTTPException(409, "Vipps-betaling er ikke fullført ennå")
+    elif order.status != "paid":
         order.status = "paid"
         if provider_reference:
             order.provider_reference = provider_reference[:120]
@@ -475,6 +685,7 @@ def confirm_payment_order(
         "listing_id": item.id,
         "status": "active",
     }
+
 
 # === STRIPE CHECKOUT SESSION ===
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
