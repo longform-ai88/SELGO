@@ -243,25 +243,23 @@ margin: 0 auto;
 }
 
 .ai-assistant {
-flex-shrink: 0;
-width: 220px;
-position: sticky;
-top: calc(84px + env(safe-area-inset-top, 0px));
-background: rgba(255,255,255,0.8);
+width: 100%;
+position: static;
+background: rgba(255,255,255,0.9);
 color: #111;
-padding: 10px;
+padding: 12px 14px;
 border-radius: 16px;
 font-size: 11px;
-box-shadow: 0 8px 24px rgba(16, 32, 57, 0.1);
-border: 1px solid rgba(255,255,255,0.9);
+box-shadow: 0 4px 14px rgba(16, 32, 57, 0.08);
+border: 1px solid #e5e7eb;
 backdrop-filter: blur(14px);
 -webkit-backdrop-filter: blur(14px);
 transition: all 0.2s var(--ease-standard);
+margin-bottom: 14px;
 }
 
 .ai-assistant.collapsed {
-width: 168px;
-padding: 8px;
+padding: 10px 14px;
 }
 
 .ai-assistant h3 {
@@ -1032,35 +1030,65 @@ margin: 0 auto 20px;
 
 .lang-switch {
 display: flex;
-gap: 6px;
-position: absolute;
-top: 74px;
-right: 24px;
+gap: 0;
+position: fixed;
+top: calc(6px + env(safe-area-inset-top, 0px));
+right: 14px;
+z-index: 999;
+background: rgba(255,255,255,0.85);
+border: 1px solid #d1d5db;
+border-radius: 8px;
+overflow: hidden;
+backdrop-filter: blur(8px);
+-webkit-backdrop-filter: blur(8px);
 }
 
 .lang-switch button {
 width: auto;
 flex: none;
-padding: 5px 12px;
-font-size: 12px;
+padding: 4px 9px;
+font-size: 10px;
 font-weight: 700;
 margin: 0;
-border-radius: 8px;
+border-radius: 0;
+border: none;
+background: transparent;
+color: #6b7280;
+letter-spacing: 0.05em;
+}
+
+.lang-switch button:first-child {
+border-right: 1px solid #d1d5db;
+}
+
+.lang-switch button[data-active="true"],
+.lang-switch button.active {
+color: #0d274f;
+background: #eff6ff;
 }
 
 .category-wrap {
 background: #fff;
-padding: 20px;
+padding: 18px 18px 14px;
 border-radius: 20px;
 margin-bottom: 18px;
 border: 1px solid #e5e7eb;
-box-shadow: 0 8px 20px rgba(15,23,42,0.06);
+box-shadow: 0 4px 16px rgba(15,23,42,0.07);
+}
+
+.category-wrap h2 {
+font-size: 13px;
+font-weight: 700;
+color: #6b7280;
+letter-spacing: 0.06em;
+text-transform: uppercase;
+margin: 0 0 12px 2px;
 }
 
 .category-grid {
 display: grid;
 grid-template-columns: repeat(3, minmax(0, 1fr));
-gap: 10px;
+gap: 8px;
 }
 
 .cat-card {
@@ -1068,42 +1096,41 @@ display: flex;
 flex-direction: column;
 align-items: center;
 justify-content: center;
-background: #fff;
-border: 1px solid #e5e7eb;
-border-radius: 16px;
-padding: 16px;
+background: #f8fafc;
+border: 1.5px solid #e5e7eb;
+border-radius: 14px;
+padding: 14px 8px;
 cursor: pointer;
-transition: none;
+transition: background 0.15s, border-color 0.15s;
 user-select: none;
-gap: 6px;
+gap: 5px;
 box-shadow: none;
+min-height: 72px;
 }
 
 .cat-card:hover {
-transform: none;
-border-color: #cfd5de;
-box-shadow: none;
+background: #f1f5f9;
+border-color: #c7d2dd;
 }
 
 .cat-card:active {
-transform: scale(0.99);
-box-shadow: none;
+transform: scale(0.97);
 }
 
 .cat-card.active {
-border-color: #1e3a8a;
+border-color: #0d274f;
 background: #eff6ff;
 }
 
 .cat-card .cat-icon {
-font-size: 26px;
+font-size: 24px;
 line-height: 1;
 }
 
 .cat-card .cat-label {
-font-size: 12px;
+font-size: 11px;
 font-weight: 700;
-color: #102039;
+color: #374151;
 text-align: center;
 line-height: 1.2;
 }
@@ -1686,9 +1713,6 @@ margin-right: 0;
 justify-content: center;
 }
 
-.lang-switch {
-right: 14px;
-}
 }
 
 @media (max-width: 430px) {
@@ -1742,10 +1766,7 @@ padding: 22px 16px;
 font-size: 13px;
 }
 
-.lang-switch {
-right: 10px;
-top: calc(80px + env(safe-area-inset-top, 0px));
-}
+
 }
 
 @media (max-width: 390px) {
@@ -1917,6 +1938,8 @@ width: 146px;
 
 <div class="page-layout">
 
+<div class="container">
+
 <div class="ai-assistant collapsed">
 <div class="assistant-top">
 <h3>SELGA Assistent</h3>
@@ -1926,8 +1949,6 @@ width: 146px;
 <input id="aiPrompt" placeholder="Skriv her..." onkeydown="if(event.key==='Enter')runHighLogicAssistant()">
 <button onclick="runHighLogicAssistant()" id="aiRunBtn">Send</button>
 </div>
-
-<div class="container">
 
 <div class="main-title">
   <div class="logo-wrap">
