@@ -36,6 +36,12 @@ html {
 scroll-behavior: smooth;
 }
 
+html, body {
+width: 100%;
+max-width: 100%;
+overflow-x: clip;
+}
+
 body {
 font-family: "Manrope", "Segoe UI", sans-serif;
 background: linear-gradient(165deg, #1c1408 0%, #161009 38%, #1e1a0e 70%, #0f0d07 100%);
@@ -50,6 +56,12 @@ min-height: 100dvh;
 -webkit-text-size-adjust: 100%;
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
+}
+
+@supports (-webkit-touch-callout: none) {
+body {
+min-height: 100svh;
+}
 }
 
 body::before {
