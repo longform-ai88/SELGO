@@ -2710,17 +2710,10 @@ function renderCategoryButtons(){
   if (activeCat && activeCat.subs.length > 0) {
     let subHtml = "";
     activeCat.subs.forEach(s => {
-      subHtml += `<button class="subcat-chip ${activeSubcat===s?"active":""}" type="button" data-sub="${s}">${s}</button>`;
+      subHtml += `<button class="subcat-chip ${activeSubcat===s?"active":""}" type="button" data-sub="${s}" onclick="handleSubcatTap(this)">${s}</button>`;
     });
     subRow.innerHTML = subHtml;
     subRow.style.display = "flex";
-    subRow.querySelectorAll(".subcat-chip").forEach(btn => {
-      btn.addEventListener("click", () => {
-        activeSubcat = activeSubcat === btn.dataset.sub ? null : btn.dataset.sub;
-        renderCategoryButtons();
-        renderItems();
-      });
-    });
   } else {
     subRow.innerHTML = "";
     subRow.style.display = "none";
@@ -2748,6 +2741,14 @@ function handleCatCardTap(card) {
   navigateToCategoryListings(activeCategory);
   renderCategoryButtons();
   renderPricingPreview();
+  renderItems();
+}
+
+function handleSubcatTap(btn) {
+  const sub = btn.dataset.sub;
+  if (!sub) return;
+  activeSubcat = activeSubcat === sub ? null : sub;
+  renderCategoryButtons();
   renderItems();
 }
 
