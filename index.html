@@ -1452,7 +1452,7 @@ function updatePaymentActionButtons() {
   if (fee > 0) {
     addBtn.style.display = "none";
     payBtn.style.display = "";
-    if (vippsManualBox) vippsManualBox.style.display = method === "vipps" ? "block" : "none";
+    if (vippsManualBox) vippsManualBox.style.display = "none";
   } else {
     addBtn.style.display = "";
     payBtn.style.display = "none";
@@ -2316,7 +2316,12 @@ async function restoreLatestPendingPaymentOrder() {
 
     latestPendingOrderId = order.id;
     if (order.provider === "vipps") {
-      showPublishStatus(`Du har en ventende Vipps-betaling (${order.amount || "?"} NOK). Betal med QR/nummer 40315139 og trykk bekreft.`, false, true);
+      latestPendingOrderId = order.id;
+      const amountEl = document.getElementById("vippsAmountDisplay");
+      if (amountEl) amountEl.textContent = `${order.amount || "?"} kr`;
+      const box = document.getElementById("vippsManualBox");
+      if (box) box.style.display = "block";
+      showPublishStatus(`Betal ${order.amount || "?"} kr til Vipps 40315139, trykk deretter knappen under.`, false, true);
     } else {
       showPublishStatus(`Du har en ventende betaling (${order.amount || "?"} NOK). Fullfor betalingen for a aktivere annonsen.`, false, true);
     }
