@@ -1006,24 +1006,15 @@ font-size: 30px;
 <button onclick="addItem()" id="addBtn"></button>
 <button type="button" id="payBtn" class="vipps-secondary" style="display:none" onclick="handlePayment(document.getElementById('paymentProvider').value)">Gå til betaling</button>
 <div id="vippsManualBox" class="vipps-manual" style="display:none">
-  <h4>Betal med Vipps</h4>
-  <div style="background:#fff3e8;border:1px solid #FF5B24;border-radius:10px;padding:14px;margin:8px 0;text-align:center">
-    <div style="font-size:13px;color:#555;margin-bottom:6px">Åpne Vipps og betal til dette nummeret:</div>
-    <div style="font-size:42px;font-weight:900;color:#FF5B24;letter-spacing:4px;line-height:1.1">40315139</div>
-    <div style="font-size:12px;color:#888;margin-top:4px">Vipps-nummer for SELGA</div>
+  <div style="text-align:center;padding:16px 10px">
+    <div style="font-size:14px;color:#555;margin-bottom:4px">Vipps til nummer</div>
+    <div style="font-size:48px;font-weight:900;color:#FF5B24;letter-spacing:4px" id="vippsNumberDisplay">40315139</div>
+    <div style="font-size:13px;color:#777;margin:6px 0 14px">Beløp: <strong id="vippsAmountDisplay">–</strong></div>
+    <a id="vippsDeepLink" href="https://vipps.no" target="_blank" rel="noopener" class="vipps-btn" style="display:inline-flex;text-decoration:none">
+      <span class="vipps-logo">Vipps</span>
+      <span id="vippsDeepLinkLabel">Åpne Vipps-appen</span>
+    </a>
   </div>
-  <div style="background:#f9f9f9;border-radius:8px;padding:10px 12px;margin:8px 0;font-size:13px;color:#333;line-height:1.8">
-    <strong>Slik betaler du:</strong><br>
-    1. Åpne <strong>Vipps-appen</strong><br>
-    2. Trykk <strong>Send</strong> (ikke skann)<br>
-    3. Skriv <strong>40315139</strong> i søkefeltet<br>
-    4. Skriv inn beløpet og send
-  </div>
-  <a id="vippsDeepLink" href="https://vipps.no" target="_blank" rel="noopener" class="vipps-btn" style="display:inline-flex;text-decoration:none;margin:10px 0 8px">
-    <span class="vipps-logo">Vipps</span>
-    <span id="vippsDeepLinkLabel">Åpne Vipps</span>
-  </a>
-  <small>Etter betaling: trykk den oransje knappen under for å aktivere annonsen og få ditt betalingsreferansenummer.</small>
 </div>
 <div id="publishStatus" class="payment-status"></div>
 </div>
@@ -2223,13 +2214,11 @@ async function handlePayment(method) {
 
     latestPendingOrderId = data.payment_order_id;
     const amountNok = data.fee_nok || fee;
-    const deepLink = document.getElementById("vippsDeepLink");
-    const deepLabel = document.getElementById("vippsDeepLinkLabel");
-    if (deepLink) deepLink.href = `https://vipps.no`;
-    if (deepLabel) deepLabel.textContent = `Betal ${amountNok} kr med Vipps`;
+    const amountEl = document.getElementById("vippsAmountDisplay");
+    if (amountEl) amountEl.textContent = `${amountNok} kr`;
     const box = document.getElementById("vippsManualBox");
     if (box) box.style.display = "block";
-    showPublishStatus(`Annonse opprettet og venter på Vipps betaling (${amountNok} NOK). Betal med knappen over eller Vipps-nummer 40315139, og trykk deretter bekreft.`, false, true);
+    showPublishStatus(`Betal ${amountNok} kr til Vipps 40315139, trykk deretter knappen under.`, false, true);
     return;
   }
 
