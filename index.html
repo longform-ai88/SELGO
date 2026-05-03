@@ -1095,6 +1095,9 @@ box-sizing: border-box;
 margin: 0 !important;
 touch-action: manipulation;
 -webkit-tap-highlight-color: transparent;
+-webkit-appearance: none;
+appearance: none;
+font-family: inherit;
 }
 
 .cat-card:hover {
@@ -2693,12 +2696,12 @@ function renderCategoryButtons(){
   let html = "";
   categoryOrder.forEach(key => {
     if (key === "ALL") {
-      html += `<div class="cat-card ${activeCategory==="ALL"?"active":""}" data-key="ALL" onclick="handleCatCardTap(this)"><span class="cat-icon">🏷️</span><span class="cat-label">${labelByKey.ALL}</span></div>`;
+      html += `<button type="button" class="cat-card ${activeCategory==="ALL"?"active":""}" data-key="ALL" onclick="handleCatCardTap(this)"><span class="cat-icon">🏷️</span><span class="cat-label">${labelByKey.ALL}</span></button>`;
       return;
     }
     const c = categoryItems.find(item => item.key === key);
     if (!c) return;
-    html += `<div class="cat-card ${activeCategory===c.key?"active":""}" data-key="${c.key}" onclick="handleCatCardTap(this)"><span class="cat-icon">${c.icon}</span><span class="cat-label">${labelByKey[c.key] || c.key}</span></div>`;
+    html += `<button type="button" class="cat-card ${activeCategory===c.key?"active":""}" data-key="${c.key}" onclick="handleCatCardTap(this)"><span class="cat-icon">${c.icon}</span><span class="cat-label">${labelByKey[c.key] || c.key}</span></button>`;
   });
   root.innerHTML = html;
 
