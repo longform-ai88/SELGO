@@ -8,3 +8,7 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: APP_BASE_URL
+        value: https://selga.no
+      - key: VIPPS_REDIRECT_URI
+        value: https://selga.no/auth/vipps/callback

@@ -58,6 +58,17 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "items", "address", "VARCHAR")
     _add_column_if_missing(_conn, "items", "seller_phone", "VARCHAR")
 
+    _add_column_if_missing(_conn, "payment_orders", "provider", "VARCHAR")
+    _add_column_if_missing(_conn, "payment_orders", "amount", "FLOAT")
+    _add_column_if_missing(_conn, "payment_orders", "currency", "VARCHAR DEFAULT 'NOK'")
+    _add_column_if_missing(_conn, "payment_orders", "status", "VARCHAR DEFAULT 'created'")
+    _add_column_if_missing(_conn, "payment_orders", "provider_reference", "VARCHAR")
+    _add_column_if_missing(_conn, "payment_orders", "listing_type", "VARCHAR")
+    _add_column_if_missing(_conn, "payment_orders", "listing_duration_days", "INTEGER")
+    _add_column_if_missing(_conn, "payment_orders", "expires_at", "DATETIME")
+    _add_column_if_missing(_conn, "payment_orders", "item_price", "FLOAT")
+    _add_column_if_missing(_conn, "payment_orders", "created_at", "DATETIME")
+
     _conn.commit()
 
 UPLOAD_DIR = Path("uploads")
@@ -85,6 +96,32 @@ VIPPS_REDIRECT_URI = os.getenv(
 
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth = OAuth2PasswordBearer(tokenUrl="login")
+
+
+def normalize_payment_provider(provider: Optional[str]) -> str:
+    value = (provider or "").strip().lower()
+    if value in {"stripe", "vipps"}:
+        return value
+    return "vipps"
+
+
+def calculate_listing_fee_nok(price: float, category: Optional[str], listing_mode: Optional[str], is_free_user: bool) -> float:
+    if is_free_user:
+        return 0.0
+
+    category_text = (category or "").strip().lower()
+    mode = (listing_mode or "").strip().lower()
+    amount = float(price or 0)
+
+    if category_text.startswith("bil"):
+        return 499.0
+    if category_text.startswith("bolig"):
+        return 799.0 if mode == "rent" else 1499.0
+    if amount <= 0 or amount < 2000:
+        return 0.0
+    if amount <= 9999:
+        return 199.0
+    return 299.0
 
 # === DB ===
 def get_db():
@@ -237,12 +274,15 @@ async def create_listing(
     image_url = json.dumps(image_urls) if image_urls else None
 
     boost_flag = boost.lower() == "true"
+    payment_provider_value = normalize_payment_provider(payment_provider)
+    fee_nok = calculate_listing_fee_nok(price, category, listing_mode, bool(user.is_free))
+    payment_required = fee_nok > 0
+
     listing_type = listing_mode if listing_mode else "standard"
     duration = 120 if listing_type == "sale" else 60
     expires = datetime.utcnow() + timedelta(days=duration)
 
-    is_stripe = payment_provider == "stripe"
-    listing_status = "pending_payment" if is_stripe else "active"
+    listing_status = "pending_payment" if payment_required else "active"
 
     item = ItemDB(
         title=title,
@@ -254,6 +294,7 @@ async def create_listing(
         listing_type=listing_type,
         boost_selected=boost_flag,
         is_featured=boost_flag,
+        listing_price_paid=0 if payment_required else fee_nok,
         listing_duration_days=duration,
         expires_at=expires,
         status=listing_status,
@@ -265,9 +306,35 @@ async def create_listing(
 
     owner = ListingOwnerDB(item_id=item.id, username=user.username)
     db.add(owner)
+
+    payment_order_id = None
+    if payment_required:
+        order = PaymentOrderDB(
+            item_id=item.id,
+            buyer_username=user.username,
+            provider=payment_provider_value,
+            amount=fee_nok,
+            currency="NOK",
+            status="created",
+            listing_type=listing_type,
+            listing_duration_days=duration,
+            expires_at=expires,
+            item_price=price,
+        )
+        db.add(order)
+        db.flush()
+        payment_order_id = order.id
+
     db.commit()
     db.refresh(item)
-    return {"msg": "created", "listing_id": item.id, "payment_required": is_stripe}
+    return {
+        "msg": "created",
+        "listing_id": item.id,
+        "payment_required": payment_required,
+        "payment_order_id": payment_order_id,
+        "fee_nok": fee_nok,
+        "provider": payment_provider_value,
+    }
 
 # === DELETE LISTING ===
 @app.delete("/listings/{item_id}")
@@ -311,9 +378,101 @@ def activate_listing(item_id: int, token: str = Depends(oauth), db: Session = De
     if not item:
         raise HTTPException(404, "Annonse ikke funnet")
 
+    if item.status == "pending_payment":
+        paid_order = (
+            db.query(PaymentOrderDB)
+            .filter(
+                PaymentOrderDB.item_id == item_id,
+                PaymentOrderDB.buyer_username == user.username,
+                PaymentOrderDB.status == "paid",
+            )
+            .order_by(PaymentOrderDB.id.desc())
+            .first()
+        )
+        if not paid_order:
+            raise HTTPException(403, "Betaling mangler for denne annonsen")
+
     item.status = "active"
     db.commit()
     return {"msg": "activated"}
+
+
+@app.get("/payments/orders/latest-pending")
+def latest_pending_payment_order(token: str = Depends(oauth), db: Session = Depends(get_db)):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    order = (
+        db.query(PaymentOrderDB)
+        .filter(
+            PaymentOrderDB.buyer_username == user.username,
+            PaymentOrderDB.status == "created",
+        )
+        .order_by(PaymentOrderDB.id.desc())
+        .first()
+    )
+    if not order:
+        return {"order": None}
+
+    return {
+        "order": {
+            "id": order.id,
+            "item_id": order.item_id,
+            "provider": order.provider,
+            "amount": order.amount,
+            "currency": order.currency,
+            "status": order.status,
+            "created_at": order.created_at.isoformat() if order.created_at else None,
+        }
+    }
+
+
+@app.post("/payments/orders/{order_id}/confirm")
+def confirm_payment_order(
+    order_id: int,
+    provider_reference: str = Form(None),
+    token: str = Depends(oauth),
+    db: Session = Depends(get_db),
+):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    order = db.query(PaymentOrderDB).filter(PaymentOrderDB.id == order_id).first()
+    if not order:
+        raise HTTPException(404, "Betalingsordre ikke funnet")
+    if order.buyer_username != user.username:
+        raise HTTPException(403, "Du har ikke tilgang til denne betalingsordren")
+
+    item = db.query(ItemDB).filter(ItemDB.id == order.item_id).first()
+    if not item:
+        raise HTTPException(404, "Annonse ikke funnet")
+
+    owner = db.query(ListingOwnerDB).filter(
+        ListingOwnerDB.item_id == item.id,
+        ListingOwnerDB.username == user.username,
+    ).first()
+    if not owner:
+        raise HTTPException(403, "Du eier ikke denne annonsen")
+
+    if order.status != "paid":
+        order.status = "paid"
+        if provider_reference:
+            order.provider_reference = provider_reference[:120]
+
+    item.status = "active"
+    item.listing_price_paid = float(order.amount or 0)
+
+    db.commit()
+    return {
+        "msg": "confirmed",
+        "order_id": order.id,
+        "listing_id": item.id,
+        "status": "active",
+    }
 
 # === STRIPE CHECKOUT SESSION ===
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
@@ -332,12 +491,37 @@ async def create_checkout_session(
     import stripe as stripe_lib
     stripe_lib.api_key = STRIPE_SECRET_KEY
 
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
     item = db.query(ItemDB).filter(ItemDB.id == item_id).first()
     if not item:
         raise HTTPException(404, "Annonse ikke funnet")
 
+    owner = db.query(ListingOwnerDB).filter(
+        ListingOwnerDB.item_id == item_id,
+        ListingOwnerDB.username == user.username,
+    ).first()
+    if not owner:
+        raise HTTPException(403, "Du eier ikke denne annonsen")
+
+    order = (
+        db.query(PaymentOrderDB)
+        .filter(
+            PaymentOrderDB.item_id == item_id,
+            PaymentOrderDB.buyer_username == user.username,
+            PaymentOrderDB.provider == "stripe",
+            PaymentOrderDB.status == "created",
+        )
+        .order_by(PaymentOrderDB.id.desc())
+        .first()
+    )
+
     amount_oere = int(round(amount * 100))
-    success_url = f"{APP_BASE_URL}/?payment=success&listing_id={item_id}"
+    order_q = f"&order_id={order.id}" if order else ""
+    success_url = f"{APP_BASE_URL}/?payment=success&listing_id={item_id}{order_q}&session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{APP_BASE_URL}/?payment=cancel"
 
     session = stripe_lib.checkout.Session.create(
@@ -354,6 +538,11 @@ async def create_checkout_session(
         success_url=success_url,
         cancel_url=cancel_url,
     )
+
+    if order:
+        order.provider_reference = session.id
+        db.commit()
+
     return {"checkout_url": session.url}
 
 # === TEST ===

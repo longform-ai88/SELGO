@@ -341,6 +341,50 @@ font-weight: 900;
 letter-spacing: -0.5px;
 }
 
+.vipps-manual {
+margin-top: 10px;
+padding: 12px;
+border: 1px dashed #ffd0c2;
+border-radius: 12px;
+background: #fff8f5;
+}
+
+.vipps-manual h4 {
+margin: 0 0 6px 0;
+font-size: 14px;
+color: #7a2b11;
+}
+
+.vipps-manual p {
+margin: 0;
+font-size: 13px;
+color: #6a3d2f;
+}
+
+.vipps-manual-number {
+font-size: 22px;
+font-weight: 900;
+color: #ff5b24;
+letter-spacing: 1px;
+margin: 8px 0;
+}
+
+.vipps-manual img {
+display: block;
+width: min(220px, 100%);
+height: auto;
+margin: 10px 0 6px;
+border-radius: 10px;
+border: 1px solid #ffd9cd;
+background: #fff;
+}
+
+.vipps-manual small {
+display: block;
+font-size: 12px;
+color: #8a614f;
+}
+
 .auth-divider {
 text-align: center;
 color: #9baabf;
@@ -960,7 +1004,19 @@ font-size: 30px;
 <div class="hint" id="formHint">Velg kategori over for automatisk utfylling av skjema.</div>
 <div class="pricing-preview" id="pricingPreview">Prisoversikt: -</div>
 <button onclick="addItem()" id="addBtn"></button>
-<button type="button" id="payBtn" class="vipps-secondary" style="display:none" onclick="handlePayment('stripe')">Gå til betaling</button>
+<button type="button" id="payBtn" class="vipps-secondary" style="display:none" onclick="handlePayment(document.getElementById('paymentProvider').value)">Gå til betaling</button>
+<div id="vippsManualBox" class="vipps-manual" style="display:none">
+  <h4>Betal med Vipps</h4>
+  <p>Trykk på knappen under for å åpne Vipps direkte, eller scan QR-koden:</p>
+  <a id="vippsDeepLink" href="https://qr.vipps.no/28/2/01/031/4749939?v=1" target="_blank" rel="noopener" class="vipps-btn" style="display:inline-flex;text-decoration:none;margin:10px 0 8px">
+    <span class="vipps-logo">Vipps</span>
+    <span id="vippsDeepLinkLabel">Betal med Vipps</span>
+  </a>
+  <p style="font-size:12px;color:#6a3d2f;margin:4px 0 8px">Eller betal direkte til Vipps-nummer:</p>
+  <div class="vipps-manual-number">49939</div>
+  <img src="/uploads/vipps-qr.png" alt="Vipps QR-kode for SELGA betaling" loading="lazy">
+  <small>Når du har betalt, trykk "Jeg har betalt - bekreft" i statusfeltet under.</small>
+</div>
 <div id="publishStatus" class="payment-status"></div>
 </div>
 
@@ -1384,16 +1440,24 @@ function updatePaymentActionButtons() {
   const payBtn = document.getElementById("payBtn");
   const priceEl = document.getElementById("price");
   const categoryEl = document.getElementById("category");
+  const providerEl = document.getElementById("paymentProvider");
+  const vippsManualBox = document.getElementById("vippsManualBox");
 
-  if (!addBtn || !payBtn || !priceEl || !categoryEl) return;
+  if (!addBtn || !payBtn || !priceEl || !categoryEl || !providerEl) return;
 
   const fee = calculatePrice(priceEl.value, categoryEl.value);
+  const method = providerEl.value || "stripe";
+  payBtn.setAttribute("onclick", "handlePayment()");
+  payBtn.textContent = method === "vipps" ? "Betal med Vipps" : "Betal med Stripe";
+
   if (fee > 0) {
     addBtn.style.display = "none";
     payBtn.style.display = "";
+    if (vippsManualBox) vippsManualBox.style.display = method === "vipps" ? "block" : "none";
   } else {
     addBtn.style.display = "";
     payBtn.style.display = "none";
+    if (vippsManualBox) vippsManualBox.style.display = "none";
   }
 }
 
@@ -1457,7 +1521,7 @@ function prevListingFlowStep(){
   }
 }
 
-function goToPaymentFromFlow(){
+async function goToPaymentFromFlow(){
   document.getElementById("category").value = document.getElementById("flowCategory").value;
   updateSubcategoryOptions();
   document.getElementById("subcategory").value = document.getElementById("flowSubcategory").value;
@@ -1466,11 +1530,11 @@ function goToPaymentFromFlow(){
   document.getElementById("desc").value = document.getElementById("flowDesc").value;
   document.getElementById("price").value = document.getElementById("flowPrice").value;
   document.getElementById("boostToggle").checked = document.getElementById("flowBoost").checked;
-  document.getElementById("paymentProvider").value = document.getElementById("flowPaymentProvider").value;
+  const selectedProvider = document.getElementById("flowPaymentProvider").value || "vipps";
+  document.getElementById("paymentProvider").value = selectedProvider;
   renderPricingPreview();
   closeListingFlow();
-  document.getElementById("addTitle").scrollIntoView({behavior: "smooth", block: "start"});
-  showPublishStatus("Skjema er utfylt. Klikk Publiser for å fortsette til betaling.", false);
+  await handlePayment(selectedProvider);
 }
 
 function updateSubcategoryOptions(){
@@ -2111,14 +2175,41 @@ fetchItems();
 }
 
 async function handlePayment(method) {
-  if (method !== "stripe") {
-    showPublishStatus("Valgt betalingsmetode er ikke tilgjengelig enda.", true);
-    return;
-  }
-
+  const selectedMethod = method || document.getElementById("paymentProvider")?.value || "stripe";
   const fee = calculatePrice(document.getElementById("price").value, document.getElementById("category").value);
   if (fee <= 0) {
     await addItem();
+    return;
+  }
+
+  if (selectedMethod === "vipps") {
+    const created = await createListingWithProvider("vipps");
+    const data = created.data || {};
+    if (!created.ok) {
+      showPublishStatus(data.detail || "Kunne ikke opprette annonse for Vipps betaling.", true);
+      return;
+    }
+
+    if (!data.payment_required) {
+      showPublishStatus("Annonse publisert og aktiv.");
+      fetchItems();
+      return;
+    }
+
+    latestPendingOrderId = data.payment_order_id;
+    const amountNok = data.fee_nok || fee;
+    const deepLink = document.getElementById("vippsDeepLink");
+    const deepLabel = document.getElementById("vippsDeepLinkLabel");
+    if (deepLink) deepLink.href = `https://qr.vipps.no/28/2/01/031/4749939?v=1&amount=${Math.round(amountNok * 100)}`;
+    if (deepLabel) deepLabel.textContent = `Betal ${amountNok} kr med Vipps`;
+    const box = document.getElementById("vippsManualBox");
+    if (box) box.style.display = "block";
+    showPublishStatus(`Annonse opprettet og venter på Vipps betaling (${amountNok} NOK). Betal med knappen over eller Vipps-nummer 49939, og trykk deretter bekreft.`, false, true);
+    return;
+  }
+
+  if (selectedMethod !== "stripe") {
+    showPublishStatus("Valgt betalingsmetode er ikke tilgjengelig enda.", true);
     return;
   }
 
@@ -2193,6 +2284,31 @@ async function confirmLatestPayment(){
   fetchItems();
 }
 
+async function restoreLatestPendingPaymentOrder() {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await fetch(API + "/payments/orders/latest-pending", {
+      headers: {"Authorization": "Bearer " + token}
+    });
+    if (!res.ok) return;
+
+    const data = await res.json().catch(()=>({}));
+    const order = data.order;
+    if (!order || !order.id) return;
+
+    latestPendingOrderId = order.id;
+    if (order.provider === "vipps") {
+      showPublishStatus(`Du har en ventende Vipps-betaling (${order.amount || "?"} NOK). Betal med QR/nummer 49939 og trykk bekreft.`, false, true);
+    } else {
+      showPublishStatus(`Du har en ventende betaling (${order.amount || "?"} NOK). Fullfor betalingen for a aktivere annonsen.`, false, true);
+    }
+  } catch (_) {
+    // Ignore restore errors to avoid blocking app startup.
+  }
+}
+
 async function handleStripeReturn() {
   const params = new URLSearchParams(window.location.search);
   const payment = params.get("payment");
@@ -2202,8 +2318,17 @@ async function handleStripeReturn() {
 
   if (payment === "success") {
     const token = localStorage.getItem("token");
-    // Activate listing if listing_id is in URL
-    if (listingId > 0 && token) {
+    if (orderId > 0) {
+      latestPendingOrderId = orderId;
+      const result = await confirmPaymentOrderById(orderId, sessionId || "stripe_checkout_success");
+      if (result.ok) {
+        showPublishStatus("Annonse publisert", false);
+        fetchItems();
+      } else {
+        const data = result.data || {};
+        showPublishStatus(data.detail || "Betaling registrert, men bekrefting feilet.", true);
+      }
+    } else if (listingId > 0 && token) {
       const activateRes = await fetch(API + "/listings/" + listingId + "/activate", {
         method: "POST",
         headers: {"Authorization": "Bearer " + token}
@@ -2213,16 +2338,6 @@ async function handleStripeReturn() {
         fetchItems();
       } else {
         showPublishStatus("Betaling godkjent, men aktivering feilet. Kontakt support.", true);
-      }
-    } else if (orderId > 0) {
-      latestPendingOrderId = orderId;
-      const result = await confirmPaymentOrderById(orderId, sessionId || "stripe_checkout_success");
-      if (result.ok) {
-        showPublishStatus("Annonse publisert", false);
-        fetchItems();
-      } else {
-        const data = result.data || {};
-        showPublishStatus(data.detail || "Betaling registrert, men bekrefting feilet.", true);
       }
     }
     params.delete("payment");
@@ -2357,6 +2472,7 @@ async function runHighLogicAssistant(){
 window.onload=async ()=>{
   await ensureWorkingApiBase();
   updateAuthUI();
+await restoreLatestPendingPaymentOrder();
 setLang("no");
 handleStripeReturn();
 const qCategory = new URLSearchParams(window.location.search).get("category");
@@ -2371,9 +2487,11 @@ fetchItems();
 const priceEl = document.getElementById("price");
 const categoryEl = document.getElementById("category");
 const modeEl = document.getElementById("listingMode");
+const providerEl = document.getElementById("paymentProvider");
 if (priceEl) priceEl.addEventListener("input", renderPricingPreview);
 if (categoryEl) categoryEl.addEventListener("change", () => { updateSubcategoryOptions(); renderPricingPreview(); });
 if (modeEl) modeEl.addEventListener("change", renderPricingPreview);
+if (providerEl) providerEl.addEventListener("change", renderPricingPreview);
 
 const flowPriceEl = document.getElementById("flowPrice");
 const flowCategoryEl = document.getElementById("flowCategory");
