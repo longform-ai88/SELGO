@@ -1007,14 +1007,16 @@ font-size: 30px;
 <button type="button" id="payBtn" class="vipps-secondary" style="display:none" onclick="handlePayment(document.getElementById('paymentProvider').value)">Gå til betaling</button>
 <div id="vippsManualBox" class="vipps-manual" style="display:none">
   <h4>Betal med Vipps</h4>
-  <p>Trykk på knappen under for å åpne Vipps direkte, eller scan QR-koden:</p>
-  <a id="vippsDeepLink" href="https://qr.vipps.no/28/2/01/031/4749939?v=1" target="_blank" rel="noopener" class="vipps-btn" style="display:inline-flex;text-decoration:none;margin:10px 0 8px">
+  <p style="margin-bottom:6px">Åpne Vipps-appen og søk på nummer <strong>49939</strong>, eller scan QR-koden under:</p>
+  <div style="background:#fff;border-radius:10px;padding:10px;display:inline-block;margin:8px 0">
+    <img src="/uploads/vipps-qr.png" alt="Scan for å se Vipps-nummer 49939" loading="lazy" style="width:160px;height:160px;display:block">
+    <div style="text-align:center;font-size:13px;font-weight:bold;color:#FF5B24;margin-top:4px">Vipps 49939</div>
+  </div>
+  <p style="font-size:13px;color:#444;margin:6px 0 4px">Steg: Åpne Vipps → Betal → Skriv <strong>49939</strong> → Skriv inn beløpet vist over → Send</p>
+  <a id="vippsDeepLink" href="https://vipps.no" target="_blank" rel="noopener" class="vipps-btn" style="display:inline-flex;text-decoration:none;margin:10px 0 8px">
     <span class="vipps-logo">Vipps</span>
-    <span id="vippsDeepLinkLabel">Betal med Vipps</span>
+    <span id="vippsDeepLinkLabel">Åpne Vipps</span>
   </a>
-  <p style="font-size:12px;color:#6a3d2f;margin:4px 0 8px">Eller betal direkte til Vipps-nummer:</p>
-  <div class="vipps-manual-number">49939</div>
-  <img src="/uploads/vipps-qr.png" alt="Vipps QR-kode for SELGA betaling" loading="lazy">
   <small>Når du har betalt, trykk "Jeg har betalt - bekreft" i statusfeltet under.</small>
 </div>
 <div id="publishStatus" class="payment-status"></div>
@@ -2200,7 +2202,7 @@ async function handlePayment(method) {
     const amountNok = data.fee_nok || fee;
     const deepLink = document.getElementById("vippsDeepLink");
     const deepLabel = document.getElementById("vippsDeepLinkLabel");
-    if (deepLink) deepLink.href = `https://qr.vipps.no/28/2/01/031/4749939?v=1&amount=${Math.round(amountNok * 100)}`;
+    if (deepLink) deepLink.href = `https://vipps.no`;
     if (deepLabel) deepLabel.textContent = `Betal ${amountNok} kr med Vipps`;
     const box = document.getElementById("vippsManualBox");
     if (box) box.style.display = "block";
