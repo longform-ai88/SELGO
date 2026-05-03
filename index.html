@@ -1034,46 +1034,6 @@ width: min(420px, 100%);
 margin: 0 auto 20px;
 }
 
-.lang-switch {
-display: flex;
-gap: 0;
-position: fixed;
-top: calc(74px + env(safe-area-inset-top, 0px) + 6px);
-right: max(12px, env(safe-area-inset-right, 12px));
-z-index: 979;
-background: rgba(255,255,255,0.9);
-border: 1px solid #d1d5db;
-border-radius: 8px;
-overflow: hidden;
-backdrop-filter: blur(8px);
--webkit-backdrop-filter: blur(8px);
-box-shadow: 0 2px 8px rgba(15,23,42,0.08);
-}
-
-.lang-switch button {
-width: auto;
-flex: none;
-padding: 4px 9px;
-font-size: 10px;
-font-weight: 700;
-margin: 0;
-border-radius: 0;
-border: none;
-background: transparent;
-color: #6b7280;
-letter-spacing: 0.05em;
-}
-
-.lang-switch button:first-child {
-border-right: 1px solid #d1d5db;
-}
-
-.lang-switch button[data-active="true"],
-.lang-switch button.active {
-color: #0d274f;
-background: #eff6ff;
-}
-
 .category-wrap {
 background: #fff;
 padding: 18px 18px 14px;
@@ -1094,30 +1054,31 @@ margin: 0 0 12px 2px;
 
 .category-grid {
 display: grid !important;
-grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-gap: 14px;
+grid-template-columns: repeat(3, 1fr) !important;
+gap: 12px !important;
+width: 100%;
 }
 
 .cat-card {
-display: flex;
+display: flex !important;
 flex-direction: column;
 align-items: center;
 justify-content: center;
 background: #ffffff;
 border: 1px solid #e5e7eb;
 border-radius: 16px;
-padding: 12px;
+padding: 12px 6px;
 cursor: pointer;
 transition: background 0.15s, border-color 0.15s;
 user-select: none;
 gap: 6px;
 min-height: 72px;
 text-align: center;
-}
-
-.category-grid .cat-card {
-width: 100%;
-margin: 0;
+width: 100% !important;
+min-width: 0;
+max-width: none !important;
+box-sizing: border-box;
+margin: 0 !important;
 }
 
 .cat-card:hover {
@@ -1944,11 +1905,6 @@ width: 146px;
     </div>
     <div id="profileModalBody"></div>
   </div>
-</div>
-
-<div class="lang-switch">
-  <button onclick="setLang('no')">NO</button>
-  <button onclick="setLang('en')">EN</button>
 </div>
 
 <div class="page-layout">
