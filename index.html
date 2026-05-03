@@ -1017,7 +1017,7 @@ font-size: 30px;
     <span class="vipps-logo">Vipps</span>
     <span id="vippsDeepLinkLabel">Åpne Vipps</span>
   </a>
-  <small>Når du har betalt, trykk "Jeg har betalt - bekreft" i statusfeltet under.</small>
+  <small>Etter betaling: trykk den oransje knappen under for å aktivere annonsen og få ditt betalingsreferansenummer.</small>
 </div>
 <div id="publishStatus" class="payment-status"></div>
 </div>
@@ -1667,11 +1667,28 @@ function showPublishStatus(message, isError=false, includeConfirm=false){
   const bg = isError ? "#fff3f3" : "#eef4ff";
   let html = `<div style="color:${color}">${message}</div>`;
   if (includeConfirm && latestPendingOrderId) {
-    html += `<div style="margin-top:8px" class="inline-row"><button type="button" onclick="confirmLatestPayment()">Jeg har betalt - bekreft</button></div>`;
+    html += `<div style="margin-top:10px"><button type="button" style="background:#FF5B24;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer" onclick="confirmLatestPayment()">&#10003; Jeg har betalt &ndash; aktiver annonsen</button></div>`;
   }
   el.style.borderColor = border;
   el.style.background = bg;
   el.innerHTML = html;
+  el.style.display = "block";
+}
+
+function showPaymentConfirmation(confirmationNumber){
+  const el = document.getElementById("publishStatus");
+  if (!el) return;
+  el.style.borderColor = "#4CAF50";
+  el.style.background = "#f0fff4";
+  el.innerHTML = `
+    <div style="text-align:center;padding:12px 0">
+      <div style="font-size:28px;color:#4CAF50">&#10003;</div>
+      <div style="font-size:17px;font-weight:700;color:#1a4a2e;margin:4px 0">Betaling mottatt &ndash; annonsen er n&aring; aktiv!</div>
+      <div style="font-size:13px;color:#555;margin-top:6px">Ditt betalingsreferansenummer:</div>
+      <div style="font-size:20px;font-weight:800;color:#1a4a2e;letter-spacing:2px;margin:6px 0">${confirmationNumber}</div>
+      <div style="font-size:12px;color:#777">Ta vare p&aring; dette nummeret som kvittering for betalingen.</div>
+    </div>
+  `;
   el.style.display = "block";
 }
 
@@ -2281,7 +2298,9 @@ async function confirmLatestPayment(){
     return;
   }
 
-  showPublishStatus("Betaling bekreftet. Annonsen er aktiv.");
+  const confirmData = result.data || {};
+  const confNum = confirmData.confirmation_number || `SELGA-${latestPendingOrderId}`;
+  showPaymentConfirmation(confNum);
   latestPendingOrderId = null;
   fetchItems();
 }

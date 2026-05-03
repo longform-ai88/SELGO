@@ -467,9 +467,11 @@ def confirm_payment_order(
     item.listing_price_paid = float(order.amount or 0)
 
     db.commit()
+    confirmation_number = f"SELGA-{order.id:05d}"
     return {
         "msg": "confirmed",
         "order_id": order.id,
+        "confirmation_number": confirmation_number,
         "listing_id": item.id,
         "status": "active",
     }
