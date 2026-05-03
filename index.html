@@ -1038,15 +1038,16 @@ margin: 0 auto 20px;
 display: flex;
 gap: 0;
 position: fixed;
-top: calc(6px + env(safe-area-inset-top, 0px));
+top: calc(74px + env(safe-area-inset-top, 0px) + 6px);
 right: max(12px, env(safe-area-inset-right, 12px));
-z-index: 1002;
-background: rgba(255,255,255,0.85);
+z-index: 979;
+background: rgba(255,255,255,0.9);
 border: 1px solid #d1d5db;
 border-radius: 8px;
 overflow: hidden;
 backdrop-filter: blur(8px);
 -webkit-backdrop-filter: blur(8px);
+box-shadow: 0 2px 8px rgba(15,23,42,0.08);
 }
 
 .lang-switch button {
@@ -1933,10 +1934,6 @@ width: 146px;
       <path d="M5 19c1.9-3.2 4.3-4.6 7-4.6s5.1 1.4 7 4.6"/>
     </svg>
   </button>
-  <div class="lang-switch">
-    <button onclick="setLang('no')">NO</button>
-    <button onclick="setLang('en')">EN</button>
-  </div>
 </div>
 
 <div id="profileModal" class="profile-modal-backdrop" onclick="closeProfileModal(event)">
@@ -1947,6 +1944,11 @@ width: 146px;
     </div>
     <div id="profileModalBody"></div>
   </div>
+</div>
+
+<div class="lang-switch">
+  <button onclick="setLang('no')">NO</button>
+  <button onclick="setLang('en')">EN</button>
 </div>
 
 <div class="page-layout">
