@@ -2148,6 +2148,7 @@ width: 146px;
       </select>
       <div class="hint">Trykk under for å fylle inn skjemaet og fortsette til betaling.</div>
       <button type="button" class="post-cta" onclick="goToPaymentFromFlow()">Gå til betaling</button>
+      <div id="flowStatus" class="payment-status" style="display:none;margin-top:12px"></div>
     </div>
 
     <div class="flow-actions">
@@ -2754,8 +2755,6 @@ renderCategoryButtons();
 }
 
 function showPublishStatus(message, isError=false, includeConfirm=false){
-  const el = document.getElementById("publishStatus");
-  if (!el) return;
   const color = isError ? "#7a1f1f" : "#233a5d";
   const border = isError ? "#efc0c0" : "#c9d8f2";
   const bg = isError ? "#fff3f3" : "#eef4ff";
@@ -2763,10 +2762,14 @@ function showPublishStatus(message, isError=false, includeConfirm=false){
   if (includeConfirm && latestPendingOrderId) {
     html += `<div style="margin-top:10px"><button type="button" style="background:#FF5B24;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer" onclick="confirmLatestPayment()">&#10003; Jeg har betalt &ndash; aktiver annonsen</button></div>`;
   }
-  el.style.borderColor = border;
-  el.style.background = bg;
-  el.innerHTML = html;
-  el.style.display = "block";
+  const els = [document.getElementById("publishStatus"), document.getElementById("flowStatus")];
+  els.forEach(el => {
+    if (!el) return;
+    el.style.borderColor = border;
+    el.style.background = bg;
+    el.innerHTML = html;
+    el.style.display = "block";
+  });
 }
 
 function setPayButtonLoading(isLoading, label = "Betal med Vipps") {
@@ -2782,20 +2785,21 @@ function setPayButtonLoading(isLoading, label = "Betal med Vipps") {
 }
 
 function showPaymentResult(type, detail = "") {
-  const el = document.getElementById("publishStatus");
-  if (!el) return;
-
-  if (type === "success") {
-    trackPurchase(latestPendingOrderId, null);
-    el.style.borderColor = "#4CAF50";
-    el.style.background = "#f0fff4";
-    el.innerHTML = `<div style="text-align:center;padding:12px 0"><div style="font-size:28px">✅</div><div style="font-size:18px;font-weight:700;color:#1a4a2e">Betaling fullført ✅</div><div style="font-size:13px;color:#34553f;margin-top:6px">Annonsen er aktiv.</div></div>`;
-  } else {
-    el.style.borderColor = "#efc0c0";
-    el.style.background = "#fff3f3";
-    el.innerHTML = `<div style="text-align:center;padding:12px 0"><div style="font-size:26px">⚠️</div><div style="font-size:17px;font-weight:700;color:#7a1f1f">Betaling feilet</div><div style="font-size:13px;color:#8a3333;margin-top:6px">${detail || "Prøv igjen eller velg en annen betalingsmetode."}</div></div>`;
-  }
-  el.style.display = "block";
+  const els = [document.getElementById("publishStatus"), document.getElementById("flowStatus")];
+  els.forEach(el => {
+    if (!el) return;
+    if (type === "success") {
+      trackPurchase(latestPendingOrderId, null);
+      el.style.borderColor = "#4CAF50";
+      el.style.background = "#f0fff4";
+      el.innerHTML = `<div style="text-align:center;padding:12px 0"><div style="font-size:28px">✅</div><div style="font-size:18px;font-weight:700;color:#1a4a2e">Betaling fullført ✅</div><div style="font-size:13px;color:#34553f;margin-top:6px">Annonsen er aktiv.</div></div>`;
+    } else {
+      el.style.borderColor = "#efc0c0";
+      el.style.background = "#fff3f3";
+      el.innerHTML = `<div style="text-align:center;padding:12px 0"><div style="font-size:26px">⚠️</div><div style="font-size:17px;font-weight:700;color:#7a1f1f">Betaling feilet</div><div style="font-size:13px;color:#8a3333;margin-top:6px">${detail || "Prøv igjen eller velg en annen betalingsmetode."}</div></div>`;
+    }
+    el.style.display = "block";
+  });
 }
 
 function showPaymentConfirmation(confirmationNumber){
@@ -2856,10 +2860,10 @@ async function createListingWithProvider(providerOverride = null){
   }
 
   const form = new FormData();
-  form.append("title", title.value);
-  form.append("description", desc.value);
-  form.append("price", price.value);
-  form.append("city", city.value);
+  form.append("title", document.getElementById("title").value);
+  form.append("description", document.getElementById("desc").value);
+  form.append("price", document.getElementById("price").value);
+  form.append("city", document.getElementById("city").value);
   form.append("address", document.getElementById("address").value || "");
   form.append("seller_phone", document.getElementById("sellerPhone").value || "");
   form.append("category", selectedCategory);
