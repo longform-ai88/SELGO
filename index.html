@@ -243,8 +243,8 @@ margin: 0 auto;
 }
 
 .ai-assistant {
-width: 100%;
-position: static;
+width: 180px;
+position: relative;
 background: rgba(255,255,255,0.9);
 color: #111;
 padding: 12px 14px;
@@ -256,6 +256,10 @@ backdrop-filter: blur(14px);
 -webkit-backdrop-filter: blur(14px);
 transition: all 0.2s var(--ease-standard);
 margin-bottom: 14px;
+}
+
+.ai-assistant:not(.collapsed) {
+width: min(360px, 100%);
 }
 
 .ai-assistant.collapsed {
@@ -1031,10 +1035,10 @@ margin: 0 auto 20px;
 .lang-switch {
 display: flex;
 gap: 0;
-position: fixed;
+position: absolute;
 top: calc(6px + env(safe-area-inset-top, 0px));
-right: 14px;
-z-index: 999;
+right: max(12px, env(safe-area-inset-right, 12px));
+z-index: 982;
 background: rgba(255,255,255,0.85);
 border: 1px solid #d1d5db;
 border-radius: 8px;
@@ -1086,8 +1090,8 @@ margin: 0 0 12px 2px;
 }
 
 .category-grid {
-display: grid;
-grid-template-columns: repeat(3, 1fr);
+display: grid !important;
+grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 gap: 14px;
 }
 
@@ -1106,6 +1110,11 @@ user-select: none;
 gap: 6px;
 min-height: 72px;
 text-align: center;
+}
+
+.category-grid .cat-card {
+width: 100%;
+margin: 0;
 }
 
 .cat-card:hover {
@@ -1635,19 +1644,19 @@ font-size: 30px;
 
 .ai-assistant {
 display: block;
-position: fixed;
-left: max(12px, env(safe-area-inset-left, 12px));
-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+position: relative;
+left: auto;
+bottom: auto;
 top: auto;
-width: 152px;
-z-index: 994;
-padding: 8px;
+width: 170px;
+z-index: auto;
+padding: 10px 12px;
 border-radius: 14px;
 }
 
 .ai-assistant:not(.collapsed) {
-width: calc(100% - 24px);
-max-width: 360px;
+width: min(340px, 100%);
+max-width: none;
 }
 
 .page-layout {
@@ -1919,6 +1928,10 @@ width: 146px;
       <path d="M5 19c1.9-3.2 4.3-4.6 7-4.6s5.1 1.4 7 4.6"/>
     </svg>
   </button>
+  <div class="lang-switch">
+    <button onclick="setLang('no')">NO</button>
+    <button onclick="setLang('en')">EN</button>
+  </div>
 </div>
 
 <div id="profileModal" class="profile-modal-backdrop" onclick="closeProfileModal(event)">
@@ -1929,11 +1942,6 @@ width: 146px;
     </div>
     <div id="profileModalBody"></div>
   </div>
-</div>
-
-<div class="lang-switch">
-<button onclick="setLang('no')">NO</button>
-<button onclick="setLang('en')">EN</button>
 </div>
 
 <div class="page-layout">
