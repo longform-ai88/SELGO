@@ -2727,7 +2727,7 @@ function renderCategoryButtons(){
   }
 
   root.querySelectorAll(".cat-card").forEach(card => {
-    card.addEventListener("click", () => handleCatCardTap(card));
+    // click handled by inline onclick="handleCatCardTap(this)" — no duplicate listener
   });
 }
 
