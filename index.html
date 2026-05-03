@@ -2151,7 +2151,7 @@ width: 146px;
 
     <div class="flow-actions">
       <button type="button" class="ghost" onclick="prevListingFlowStep()">Forrige</button>
-      <button type="button" onclick="nextListingFlowStep()">Neste</button>
+      <button type="button" id="flowNextBtn" onclick="listingFlowStep===4?goToPaymentFromFlow():nextListingFlowStep()">Neste</button>
     </div>
   </div>
 </div>
@@ -2578,6 +2578,8 @@ function updateListingFlowStep(){
   });
   const label = document.getElementById("flowStepsLabel");
   if (label) label.innerText = `Steg ${listingFlowStep} av 4`;
+  const nextBtn = document.getElementById("flowNextBtn");
+  if (nextBtn) nextBtn.innerText = listingFlowStep === 4 ? "Betal" : "Neste";
   renderFlowPricingPreview();
 }
 
@@ -2607,7 +2609,6 @@ async function goToPaymentFromFlow(){
   const selectedProvider = document.getElementById("flowPaymentProvider").value || "vipps";
   document.getElementById("paymentProvider").value = selectedProvider;
   renderPricingPreview();
-  closeListingFlow();
   await handlePayment(selectedProvider);
 }
 
