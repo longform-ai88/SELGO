@@ -16,6 +16,8 @@ services:
         value: sqlite:////data/selga.db
       - key: UPLOAD_DIR
         value: /data/uploads
+      - key: STRIPE_SECRET_KEY
+        sync: false
     disk:
       name: selga-data
       mountPath: /data

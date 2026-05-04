@@ -750,11 +750,12 @@ async def create_checkout_session(
     token: str = Depends(oauth),
     db: Session = Depends(get_db)
 ):
-    if not STRIPE_SECRET_KEY:
-        raise HTTPException(503, "Stripe er ikke konfigurert")
+    stripe_secret_key = os.getenv("STRIPE_SECRET_KEY", "").strip()
+    if not stripe_secret_key:
+        raise HTTPException(503, "Stripe checkout is not configured. Set STRIPE_SECRET_KEY in environment variables.")
 
     import stripe as stripe_lib
-    stripe_lib.api_key = STRIPE_SECRET_KEY
+    stripe_lib.api_key = stripe_secret_key
 
     data = jwt.decode(token, SECRET, algorithms=[ALGO])
     user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
