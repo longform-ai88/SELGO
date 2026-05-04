@@ -2164,9 +2164,9 @@ width: 146px;
 <option value="sale">Bolig til salgs</option>
 <option value="rent">Bolig til leie</option>
 </select>
-<select id="paymentProvider">
-<option value="vipps">Vipps</option>
-<option value="stripe">Stripe</option>
+<select id="paymentProvider" style="display:none">
+<option value="vipps" hidden disabled>Vipps</option>
+<option value="stripe" selected>Stripe</option>
 </select>
 <div class="inline-row">
   <label><input id="boostToggle" type="checkbox"> Boost annonsen (kun bil)</label>
@@ -2256,9 +2256,9 @@ width: 146px;
 
     <div class="flow-panel" data-step="4">
       <label for="flowPaymentProvider">Steg 4: Betaling</label>
-      <select id="flowPaymentProvider">
-        <option value="vipps">Vipps</option>
-        <option value="stripe">Stripe</option>
+      <select id="flowPaymentProvider" style="display:none">
+        <option value="vipps" hidden disabled>Vipps</option>
+        <option value="stripe" selected>Stripe</option>
       </select>
       <div class="hint">Trykk under for å fylle inn skjemaet og fortsette til betaling.</div>
       <button type="button" class="post-cta" onclick="goToPaymentFromFlow()">Gå til betaling</button>
@@ -2723,7 +2723,7 @@ async function goToPaymentFromFlow(){
   document.getElementById("desc").value = document.getElementById("flowDesc").value;
   document.getElementById("price").value = document.getElementById("flowPrice").value;
   document.getElementById("boostToggle").checked = document.getElementById("flowBoost").checked;
-  const selectedProvider = document.getElementById("flowPaymentProvider").value || "vipps";
+  const selectedProvider = document.getElementById("flowPaymentProvider").value || "stripe";
   document.getElementById("paymentProvider").value = selectedProvider;
   renderPricingPreview();
   await handlePayment(selectedProvider);
