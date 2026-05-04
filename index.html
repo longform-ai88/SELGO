@@ -1517,6 +1517,84 @@ margin-top: 0;
 margin-bottom: 8px;
 }
 
+.inbox-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 10px;
+margin-bottom: 8px;
+}
+
+.inbox-title-wrap {
+display: flex;
+align-items: center;
+gap: 8px;
+}
+
+.inbox-title-wrap h2 {
+margin: 0;
+}
+
+.inbox-unread-badge {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+min-width: 24px;
+height: 24px;
+padding: 0 8px;
+font-size: 12px;
+font-weight: 800;
+color: #14263f;
+background: #f7c05b;
+border-radius: 999px;
+}
+
+.inbox-list {
+display: grid;
+gap: 10px;
+}
+
+.inbox-item {
+padding: 12px;
+border-radius: 12px;
+background: rgba(255, 255, 255, 0.06);
+border: 1px solid rgba(212, 160, 23, 0.2);
+}
+
+.inbox-item.unread {
+border-color: rgba(247, 192, 91, 0.6);
+box-shadow: inset 0 0 0 1px rgba(247, 192, 91, 0.2);
+}
+
+.inbox-meta {
+display: flex;
+justify-content: space-between;
+gap: 10px;
+font-size: 12px;
+color: rgba(240, 220, 160, 0.85);
+margin-bottom: 6px;
+}
+
+.inbox-msg {
+font-size: 14px;
+line-height: 1.45;
+color: #f8f1d9;
+margin: 0 0 8px;
+white-space: pre-wrap;
+word-break: break-word;
+}
+
+.inbox-actions {
+display: flex;
+justify-content: flex-end;
+}
+
+.inbox-empty {
+font-size: 13px;
+color: rgba(240, 220, 160, 0.78);
+padding: 8px 2px;
+}
+
 .main-title {
 display: flex;
 align-items: baseline;
@@ -2042,6 +2120,26 @@ width: 146px;
 </div>
 <p id="welcome" class="subtitle"></p>
 
+<div class="panel" id="inboxPanel">
+  <div class="inbox-header">
+    <div class="inbox-title-wrap">
+      <h2>Inbox</h2>
+      <span id="inboxUnreadBadge" class="inbox-unread-badge" style="display:none">0</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <button type="button" id="inboxSoundToggleBtn" class="ghost" onclick="toggleInboxSound()">Lyd: På</button>
+      <select id="inboxSoundLevel" aria-label="Lydnivå" onchange="setInboxSoundLevel(this.value)" style="height:38px;border-radius:10px;padding:0 10px;background:rgba(255,255,255,0.06);color:rgba(240,220,160,0.9);border:1px solid rgba(212,160,23,0.28)">
+        <option value="low">Lav</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">Høy</option>
+      </select>
+      <button type="button" class="ghost" onclick="fetchInbox(true)">Oppdater</button>
+    </div>
+  </div>
+  <div id="inboxHint" class="inbox-empty">Logg inn for å se meldinger.</div>
+  <div id="inboxList" class="inbox-list" style="display:none"></div>
+</div>
+
 <h2 id="listTitle"></h2>
 <div id="itemsContainer"></div>
 
@@ -2519,6 +2617,14 @@ let latestPendingOrderId = null;
 let listingFlowStep = 1;
 const PROFILE_REGISTERED_KEY = "selga_registered";
 let profileModalMode = "login";
+let inboxPollTimer = null;
+let inboxSeenIds = new Set();
+let inboxInitialized = false;
+const INBOX_SOUND_KEY = "selga_inbox_sound";
+const INBOX_SOUND_LEVEL_KEY = "selga_inbox_sound_level";
+let inboxSoundEnabled = localStorage.getItem(INBOX_SOUND_KEY) !== "off";
+let inboxSoundLevel = localStorage.getItem(INBOX_SOUND_LEVEL_KEY) || "medium";
+let inboxLastSoundAt = 0;
 
 function toggleAssistant(){
   const box = document.querySelector(".ai-assistant");
@@ -2907,6 +3013,7 @@ function setPayButtonLoading(isLoading, label = "Betal med Vipps") {
 }
 
 function showPaymentResult(type, detail = "") {
+  playPaymentStatusSound(type === "success");
   const els = [document.getElementById("publishStatus"), document.getElementById("flowStatus")];
   els.forEach(el => {
     if (!el) return;
@@ -2925,6 +3032,7 @@ function showPaymentResult(type, detail = "") {
 }
 
 function showPaymentConfirmation(confirmationNumber){
+  playPaymentStatusSound(true);
   const el = document.getElementById("publishStatus");
   if (!el) return;
   el.style.borderColor = "#4CAF50";
@@ -3519,6 +3627,10 @@ async function loginWithVipps() {
 }
 
 function logout(){
+if (inboxPollTimer) {
+  clearInterval(inboxPollTimer);
+  inboxPollTimer = null;
+}
 localStorage.removeItem("token");
 updateAuthUI();
 location.reload();
@@ -3585,6 +3697,272 @@ function showToast(msg, duration = 3200) {
   el.classList.add("visible");
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove("visible"), duration);
+}
+
+function updateInboxSoundButton() {
+  const btn = document.getElementById("inboxSoundToggleBtn");
+  if (!btn) return;
+  btn.textContent = inboxSoundEnabled ? "Lyd: På" : "Lyd: Av";
+}
+
+function getInboxSoundVolumeMultiplier() {
+  if (inboxSoundLevel === "low") return 0.65;
+  if (inboxSoundLevel === "high") return 1.35;
+  return 1.0;
+}
+
+function updateInboxSoundControls() {
+  updateInboxSoundButton();
+  const select = document.getElementById("inboxSoundLevel");
+  if (!select) return;
+  const allowed = ["low", "medium", "high"];
+  if (!allowed.includes(inboxSoundLevel)) {
+    inboxSoundLevel = "medium";
+  }
+  select.value = inboxSoundLevel;
+}
+
+function setInboxSoundLevel(level) {
+  const allowed = ["low", "medium", "high"];
+  if (!allowed.includes(level)) return;
+  inboxSoundLevel = level;
+  localStorage.setItem(INBOX_SOUND_LEVEL_KEY, level);
+  updateInboxSoundControls();
+  const label = level === "low" ? "Lav" : level === "high" ? "Høy" : "Medium";
+  showToast(`Lydnivå: ${label}`, 1400);
+}
+
+function toggleInboxSound() {
+  inboxSoundEnabled = !inboxSoundEnabled;
+  localStorage.setItem(INBOX_SOUND_KEY, inboxSoundEnabled ? "on" : "off");
+  updateInboxSoundControls();
+  showToast(inboxSoundEnabled ? "Lydvarsel aktivert" : "Lydvarsel slått av", 1800);
+}
+
+function playInboxSound() {
+  if (!inboxSoundEnabled) return;
+  const now = Date.now();
+  if (now - inboxLastSoundAt < 900) return;
+  inboxLastSoundAt = now;
+  const volume = getInboxSoundVolumeMultiplier();
+
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    oscillator.type = "triangle";
+    oscillator.frequency.setValueAtTime(740, ctx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(560, ctx.currentTime + 0.14);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.09 * volume, ctx.currentTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.20);
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.20);
+    oscillator.onended = () => {
+      try { ctx.close(); } catch (_) {}
+    };
+  } catch (_) {
+    // Ignore unsupported/blocked audio contexts.
+  }
+}
+
+function playPaymentStatusSound(isSuccess = true) {
+  if (!inboxSoundEnabled) return;
+  const now = Date.now();
+  if (now - inboxLastSoundAt < 900) return;
+  inboxLastSoundAt = now;
+  const volume = getInboxSoundVolumeMultiplier();
+
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    const tone1 = ctx.createOscillator();
+    const tone2 = ctx.createOscillator();
+
+    tone1.type = isSuccess ? "sine" : "square";
+    tone2.type = isSuccess ? "sine" : "square";
+
+    tone1.frequency.setValueAtTime(isSuccess ? 520 : 460, ctx.currentTime);
+    tone2.frequency.setValueAtTime(isSuccess ? 700 : 330, ctx.currentTime + 0.14);
+
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime((isSuccess ? 0.10 : 0.12) * volume, ctx.currentTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.34);
+
+    tone1.connect(gain);
+    tone2.connect(gain);
+
+    tone1.start(ctx.currentTime);
+    tone1.stop(ctx.currentTime + 0.14);
+    tone2.start(ctx.currentTime + 0.14);
+    tone2.stop(ctx.currentTime + 0.34);
+
+    tone2.onended = () => {
+      try { ctx.close(); } catch (_) {}
+    };
+  } catch (_) {
+    // Ignore unsupported/blocked audio contexts.
+  }
+}
+
+function formatInboxTime(isoText) {
+  if (!isoText) return "";
+  const dt = new Date(isoText);
+  if (Number.isNaN(dt.getTime())) return "";
+  return dt.toLocaleString("nb-NO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function notifyInstantMessage(title, body) {
+  playInboxSound();
+  showToast(body || title || "Ny melding", 4800);
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "granted") {
+    try {
+      new Notification(title || "SELGA", { body: body || "Du har en ny melding" });
+    } catch (_) {
+      // Toast already shown.
+    }
+  }
+}
+
+function renderInbox(messages, unreadCount) {
+  const token = localStorage.getItem("token");
+  const listEl = document.getElementById("inboxList");
+  const hintEl = document.getElementById("inboxHint");
+  const badgeEl = document.getElementById("inboxUnreadBadge");
+  if (!listEl || !hintEl || !badgeEl) return;
+
+  if (!token) {
+    hintEl.style.display = "block";
+    hintEl.textContent = "Logg inn for å se meldinger.";
+    listEl.style.display = "none";
+    listEl.innerHTML = "";
+    badgeEl.style.display = "none";
+    return;
+  }
+
+  if (!messages || messages.length === 0) {
+    hintEl.style.display = "block";
+    hintEl.textContent = "Ingen meldinger ennå.";
+    listEl.style.display = "none";
+    listEl.innerHTML = "";
+  } else {
+    hintEl.style.display = "none";
+    listEl.style.display = "grid";
+    listEl.innerHTML = messages.map((m) => {
+      const isRead = (m.status || "").toLowerCase() === "read";
+      const safeTitle = (m.item_title || `Annonse #${m.item_id || "?"}`).replace(/</g, "&lt;");
+      const safeBuyer = (m.buyer_username || "ukjent").replace(/</g, "&lt;");
+      const safeMessage = (m.message || "").replace(/</g, "&lt;");
+      const atText = formatInboxTime(m.created_at);
+      return `
+        <div class="inbox-item ${isRead ? "" : "unread"}">
+          <div class="inbox-meta">
+            <span>Fra: <strong>${safeBuyer}</strong></span>
+            <span>${atText}</span>
+          </div>
+          <div class="inbox-meta" style="margin-top:-2px;margin-bottom:8px">
+            <span>Om: <strong>${safeTitle}</strong></span>
+            <span>${isRead ? "Lest" : "Ulest"}</span>
+          </div>
+          <p class="inbox-msg">${safeMessage}</p>
+          <div class="inbox-actions">
+            ${isRead ? "" : `<button type="button" class="ghost" onclick="markInboxMessageRead(${m.id})">Marker som lest</button>`}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  if (unreadCount > 0) {
+    badgeEl.style.display = "inline-flex";
+    badgeEl.textContent = String(unreadCount);
+  } else {
+    badgeEl.style.display = "none";
+  }
+}
+
+async function fetchInbox(showErrors = false) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    renderInbox([], 0);
+    return;
+  }
+
+  try {
+    const res = await fetch(API + "/messages/inbox?limit=50", {
+      headers: {"Authorization": "Bearer " + token}
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (showErrors) showToast(payload.detail || "Kunne ikke hente inbox", 3500);
+      return;
+    }
+
+    const messages = Array.isArray(payload.messages) ? payload.messages : [];
+    const unreadCount = Number(payload.unread_count || 0);
+
+    const newUnread = messages.filter((m) => {
+      const isRead = (m.status || "").toLowerCase() === "read";
+      return !isRead && !inboxSeenIds.has(m.id);
+    });
+
+    if (inboxInitialized && newUnread.length > 0) {
+      const newest = newUnread[0];
+      notifyInstantMessage("Ny melding", `Du har fått melding fra ${newest.buyer_username || "en bruker"}`);
+    }
+
+    messages.forEach((m) => inboxSeenIds.add(m.id));
+    inboxInitialized = true;
+    renderInbox(messages, unreadCount);
+  } catch (_) {
+    if (showErrors) showToast("Nettverksfeil ved henting av inbox", 3500);
+  }
+}
+
+async function markInboxMessageRead(messageId) {
+  const token = localStorage.getItem("token");
+  if (!token) return;
+
+  try {
+    const res = await fetch(API + `/messages/${messageId}/read`, {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + token}
+    });
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      showToast(payload.detail || "Kunne ikke oppdatere melding", 3200);
+      return;
+    }
+    fetchInbox(false);
+  } catch (_) {
+    showToast("Nettverksfeil ved oppdatering av melding", 3200);
+  }
+}
+
+function startInboxPolling() {
+  if (inboxPollTimer) {
+    clearInterval(inboxPollTimer);
+    inboxPollTimer = null;
+  }
+  fetchInbox(false);
+  inboxPollTimer = setInterval(() => fetchInbox(false), 3000);
 }
 
 async function addItem(){
@@ -4002,6 +4380,11 @@ async function runHighLogicAssistant(){
 window.onload=async ()=>{
   await ensureWorkingApiBase();
   updateAuthUI();
+updateInboxSoundControls();
+if ("Notification" in window && Notification.permission === "default") {
+  Notification.requestPermission().catch(() => {});
+}
+startInboxPolling();
 await restoreLatestPendingPaymentOrder();
 setLang("no");
 handleStripeReturn();

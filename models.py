@@ -49,6 +49,7 @@ class ContactMessageDB(Base):
     seller_username = Column(String)
     message = Column(String)
     status = Column(String, default="sent")
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class PaymentOrderDB(Base):

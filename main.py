@@ -73,6 +73,9 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "payment_orders", "item_price", "FLOAT")
     _add_column_if_missing(_conn, "payment_orders", "created_at", "DATETIME")
 
+    _add_column_if_missing(_conn, "contact_messages", "status", "VARCHAR DEFAULT 'sent'")
+    _add_column_if_missing(_conn, "contact_messages", "created_at", "DATETIME")
+
     _conn.commit()
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
@@ -827,17 +830,81 @@ def contact_seller(
 
     owner = db.query(ListingOwnerDB).filter(ListingOwnerDB.item_id == item_id).first()
     seller_username = owner.username if owner else None
+    if not seller_username:
+        raise HTTPException(404, "Selger ikke funnet for annonsen")
 
     msg = ContactMessageDB(
         item_id=item_id,
         buyer_username=buyer.username,
         seller_username=seller_username,
         message=message.strip(),
-        status="sent"
+        status="sent",
+        created_at=datetime.utcnow(),
     )
     db.add(msg)
     db.commit()
     return {"msg": "Melding sendt"}
+
+
+@app.get("/messages/inbox")
+def get_inbox_messages(limit: int = 30, token: str = Depends(oauth), db: Session = Depends(get_db)):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    safe_limit = max(1, min(int(limit or 30), 100))
+    rows = (
+        db.query(ContactMessageDB)
+        .filter(ContactMessageDB.seller_username == user.username)
+        .order_by(ContactMessageDB.id.desc())
+        .limit(safe_limit)
+        .all()
+    )
+
+    item_ids = [r.item_id for r in rows if r.item_id]
+    items = db.query(ItemDB).filter(ItemDB.id.in_(item_ids)).all() if item_ids else []
+    item_map = {i.id: i for i in items}
+
+    unread_count = 0
+    messages = []
+    for r in rows:
+        is_read = (r.status or "").lower() == "read"
+        if not is_read:
+            unread_count += 1
+        item = item_map.get(r.item_id)
+        messages.append(
+            {
+                "id": r.id,
+                "item_id": r.item_id,
+                "item_title": item.title if item else None,
+                "buyer_username": r.buyer_username,
+                "seller_username": r.seller_username,
+                "message": r.message,
+                "status": r.status,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+        )
+
+    return {"messages": messages, "unread_count": unread_count}
+
+
+@app.post("/messages/{message_id}/read")
+def mark_inbox_message_read(message_id: int, token: str = Depends(oauth), db: Session = Depends(get_db)):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    row = db.query(ContactMessageDB).filter(ContactMessageDB.id == message_id).first()
+    if not row:
+        raise HTTPException(404, "Melding ikke funnet")
+    if row.seller_username != user.username:
+        raise HTTPException(403, "Ingen tilgang til denne meldingen")
+
+    row.status = "read"
+    db.commit()
+    return {"msg": "ok"}
 
 
 # === AI ASSISTANT ===
