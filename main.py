@@ -251,7 +251,7 @@ def serve_app():
     return FileResponse("index.html")
 
 # === ADMIN: set user as free ===
-ADMIN_SECRET = os.getenv("ADMIN_SECRET", "")
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "") or os.getenv("ADMIN_PASSWORD", "") or os.getenv("ADMIN-PASSWORD", "")
 INVITE_CODE = os.getenv("INVITE_CODE", "")
 
 def _is_valid_admin_or_invite_secret(raw_secret: Optional[str]) -> bool:
