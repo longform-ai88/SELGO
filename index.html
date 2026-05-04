@@ -242,7 +242,7 @@ box-shadow: 0 12px 24px rgba(0, 0, 0, 0.55), 0 0 20px rgba(240, 198, 106, 0.36),
 }
 
 .post-shortcut:active {
-transform: scale(0.98);
+transform: translateX(-50%) scale(0.98);
 box-shadow: 0 5px 12px rgba(0, 0, 0, 0.5), 0 0 10px rgba(237, 192, 97, 0.28);
 }
 
@@ -1249,6 +1249,37 @@ display: none;
 animation: slideUp 0.2s ease-out;
 }
 
+#imgLightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+#imgLightbox.open { display: flex; }
+#imgLightbox img {
+  max-width: 94vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+#imgLightboxClose {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 32px;
+  cursor: pointer;
+  line-height: 1;
+  z-index: 10001;
+}
+
 .empty-state {
 display: flex;
 flex-direction: column;
@@ -1579,6 +1610,28 @@ from { opacity: 0; transform: translateY(12px); }
 to { opacity: 1; transform: translateY(0); }
 }
 
+#selga-toast {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a3557;
+  color: #f6cf74;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: 22px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.32);
+  z-index: 9999;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+#selga-toast.visible {
+  opacity: 1;
+}
+
 @media (max-width: 980px) {
 .page-layout {
 flex-direction: column;
@@ -1903,6 +1956,8 @@ width: 146px;
     </svg>
   </button>
   <button type="button" class="post-shortcut fab-add" aria-label="Ny annonse" onclick="openListingFlow()">+</button>
+  <div id="selga-toast"></div>
+  <div id="imgLightbox" onclick="closeLightbox()"><button id="imgLightboxClose" onclick="closeLightbox()" aria-label="Lukk">&times;</button><img id="imgLightboxImg" src="" alt=""></div>
   <button type="button" class="profile-shortcut" aria-label="Profilhandling" onclick="openProfileModal(event)">
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="8" r="3.2"></circle>
@@ -2993,11 +3048,11 @@ function openItemDetail(itemId) {
   const urls = parseImageUrls(item.image_url);
   let imgHtml = "";
   if (urls.length === 1) {
-    imgHtml = `<img src="${API}/${urls[0]}" alt="${item.title}" style="width:100%;max-height:320px;object-fit:cover;border-radius:10px;margin-bottom:14px">`;
+    imgHtml = `<img src="${API}/${urls[0]}" alt="${item.title}" style="width:100%;max-height:320px;object-fit:cover;border-radius:10px;margin-bottom:14px;cursor:zoom-in" onclick="openLightbox('${API}/${urls[0]}')">` ;
   } else if (urls.length > 1) {
     imgHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-bottom:14px">`;
     urls.forEach(u => {
-      imgHtml += `<img src="${API}/${u}" alt="${item.title}" style="width:100%;height:140px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="this.style.gridColumn=this.style.gridColumn?'':' 1 / -1'">`;
+      imgHtml += `<img src="${API}/${u}" alt="${item.title}" style="width:100%;height:140px;object-fit:cover;border-radius:8px;cursor:zoom-in" onclick="openLightbox('${API}/${u}')">`;
     });
     imgHtml += `</div>`;
   }
@@ -3335,10 +3390,37 @@ location.reload();
   }
 })();
 
+function openLightbox(src) {
+  const lb = document.getElementById("imgLightbox");
+  const img = document.getElementById("imgLightboxImg");
+  if (!lb || !img) return;
+  img.src = src;
+  lb.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeLightbox() {
+  const lb = document.getElementById("imgLightbox");
+  if (lb) lb.classList.remove("open");
+  document.body.style.overflow = "";
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
+
+let _toastTimer = null;
+function showToast(msg, duration = 3200) {
+  const el = document.getElementById("selga-toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add("visible");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove("visible"), duration);
+}
+
 async function addItem(){
+showToast("Publiserer annonse...", 10000);
 const result = await createListingWithProvider(null);
 const data = result.data || {};
 if (!result.ok) {
+  showToast("Kunne ikke publisere annonsen.", 4000);
   showPublishStatus(data.detail || "Kunne ikke publisere annonsen.", true);
   return;
 }
@@ -3346,9 +3428,11 @@ if (!result.ok) {
 if (data.payment_required) {
   latestPendingOrderId = data.payment_order_id;
   const fee = typeof data.fee_nok === "number" ? data.fee_nok : "?";
+  showToast(`Annonse opprettet – avgift ${fee} NOK. Bekreft betaling.`, 5000);
   showPublishStatus(`Annonse opprettet som venter pa betaling. Avgift: ${fee} NOK. Bekreft betaling for a aktivere annonsen.`, false, true);
 } else {
   latestPendingOrderId = null;
+  showToast("Annonse publisert og aktiv! ✓", 4000);
   showPublishStatus("Annonse publisert og aktiv.");
 }
 
@@ -3370,6 +3454,7 @@ async function handlePayment(method) {
   if (selectedMethod === "vipps") {
     let redirected = false;
     setPayButtonLoading(true, payLabel);
+    showToast("Starter Vipps-betaling...", 10000);
     showPublishStatus("Starter Vipps-betaling...", false);
     try {
       const created = await createListingWithProvider("vipps");

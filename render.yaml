@@ -12,3 +12,11 @@ services:
         value: https://selga.no
       - key: VIPPS_REDIRECT_URI
         value: https://selga.no/auth/vipps/callback
+      - key: DATABASE_URL
+        value: sqlite:////data/selga.db
+      - key: UPLOAD_DIR
+        value: /data/uploads
+    disk:
+      name: selga-data
+      mountPath: /data
+      sizeGB: 1
