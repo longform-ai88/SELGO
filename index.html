@@ -1526,8 +1526,281 @@ margin-bottom: 8px;
 }
 
 #inboxPanel {
-max-width: 620px;
-padding: 14px;
+display: none !important;
+}
+
+/* === INBOX DRAWER === */
+#inboxDrawerBackdrop {
+position: fixed;
+inset: 0;
+background: rgba(0,0,0,0.42);
+z-index: 1200;
+display: none;
+}
+#inboxDrawerBackdrop.open { display: block; }
+
+#inboxDrawer {
+position: fixed;
+right: 0;
+top: 0;
+bottom: 0;
+width: min(420px, 100vw);
+background: #fff;
+z-index: 1201;
+display: flex;
+flex-direction: column;
+transform: translateX(100%);
+transition: transform 0.26s cubic-bezier(0.22,1,0.36,1);
+box-shadow: -4px 0 32px rgba(0,0,0,0.22);
+}
+#inboxDrawer.open { transform: translateX(0); }
+
+.inbox-drawer-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 18px 16px 14px;
+border-bottom: 1px solid #e8e8e8;
+background: #fff;
+}
+.inbox-drawer-title {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.inbox-drawer-title h2 {
+margin: 0;
+font-size: 18px;
+font-weight: 800;
+color: #0f172a;
+}
+.inbox-drawer-close {
+width: 36px;
+height: 36px;
+min-height: unset;
+padding: 0;
+border-radius: 50%;
+background: #f3f4f6;
+color: #374151;
+border: none;
+font-size: 20px;
+line-height: 1;
+cursor: pointer;
+}
+.inbox-drawer-list {
+flex: 1;
+overflow-y: auto;
+padding: 0;
+margin: 0;
+}
+.inbox-drawer-empty {
+padding: 32px 20px;
+text-align: center;
+font-size: 14px;
+color: #6b7280;
+}
+.inbox-card {
+display: flex;
+align-items: flex-start;
+gap: 12px;
+padding: 14px 16px;
+border-bottom: 1px solid #f0f0f0;
+cursor: pointer;
+background: #fff;
+transition: background 0.12s;
+}
+.inbox-card:hover { background: #f9fafb; }
+.inbox-card.unread { background: #f0f7ff; }
+.inbox-card.unread:hover { background: #e8f3ff; }
+.inbox-avatar {
+flex-shrink: 0;
+width: 44px;
+height: 44px;
+border-radius: 50%;
+background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+color: #fff;
+font-size: 17px;
+font-weight: 800;
+display: flex;
+align-items: center;
+justify-content: center;
+text-transform: uppercase;
+}
+.inbox-card-body {
+flex: 1;
+min-width: 0;
+}
+.inbox-card-top {
+display: flex;
+align-items: baseline;
+justify-content: space-between;
+gap: 8px;
+margin-bottom: 2px;
+}
+.inbox-card-sender {
+font-size: 14px;
+font-weight: 700;
+color: #111827;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.inbox-card.unread .inbox-card-sender { color: #1d4ed8; }
+.inbox-card-time {
+font-size: 11px;
+color: #9ca3af;
+white-space: nowrap;
+flex-shrink: 0;
+}
+.inbox-card-subject {
+font-size: 12px;
+color: #6b7280;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+margin-bottom: 3px;
+}
+.inbox-card-preview {
+font-size: 13px;
+color: #374151;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.inbox-card.unread .inbox-card-preview { font-weight: 600; color: #111827; }
+.inbox-card-unread-dot {
+flex-shrink: 0;
+width: 8px;
+height: 8px;
+border-radius: 50%;
+background: #2563eb;
+margin-top: 6px;
+}
+
+.inbox-detail {
+display: none;
+flex-direction: column;
+height: 100%;
+}
+.inbox-detail.open { display: flex; }
+.inbox-detail-header {
+padding: 14px 16px;
+border-bottom: 1px solid #e8e8e8;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.inbox-detail-back {
+width: 32px;
+height: 32px;
+min-height: unset;
+padding: 0;
+border-radius: 50%;
+background: #f3f4f6;
+color: #374151;
+border: none;
+font-size: 18px;
+cursor: pointer;
+}
+.inbox-detail-info { flex: 1; min-width: 0; }
+.inbox-detail-sender { font-size: 15px; font-weight: 700; color: #111827; }
+.inbox-detail-subject { font-size: 12px; color: #6b7280; }
+.inbox-detail-body {
+flex: 1;
+overflow-y: auto;
+padding: 16px;
+}
+.inbox-detail-msg {
+background: #f3f4f6;
+border-radius: 12px 12px 12px 2px;
+padding: 12px 14px;
+font-size: 14px;
+line-height: 1.5;
+color: #111827;
+white-space: pre-wrap;
+word-break: break-word;
+margin-bottom: 4px;
+max-width: 90%;
+}
+.inbox-detail-time { font-size: 11px; color: #9ca3af; margin-bottom: 16px; }
+.inbox-detail-reply {
+padding: 12px 16px;
+border-top: 1px solid #e8e8e8;
+display: grid;
+grid-template-columns: 1fr auto;
+gap: 8px;
+align-items: end;
+background: #fff;
+}
+.inbox-detail-reply textarea {
+min-height: 48px;
+max-height: 120px;
+margin: 0;
+padding: 10px 12px;
+font-size: 14px;
+border-radius: 12px;
+border: 1px solid #d1d5db;
+background: #f9fafb;
+color: #111827;
+resize: none;
+}
+.inbox-detail-reply button {
+width: auto;
+min-height: 48px;
+padding: 0 18px;
+border-radius: 12px;
+font-size: 14px;
+background: #2563eb;
+color: #fff;
+border: none;
+font-weight: 700;
+}
+
+/* header inbox/notif buttons */
+.header-notif-btn {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+position: relative;
+z-index: 983;
+width: 42px;
+height: 42px;
+border-radius: 14px;
+border: 1px solid rgba(231, 177, 70, 0.78);
+background:
+radial-gradient(circle at 22% 18%, rgba(255, 228, 154, 0.48) 0%, transparent 36%),
+linear-gradient(160deg, #171717 0%, #0f0f0f 100%);
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 233, 177, 0.48), inset 0 -1px 0 rgba(120, 78, 8, 0.45);
+cursor: pointer;
+transition: transform 0.2s, box-shadow 0.2s;
+padding: 0;
+}
+.header-notif-btn svg {
+width: 20px; height: 20px; fill: none;
+stroke: #f6cf74; stroke-width: 2;
+stroke-linecap: round; stroke-linejoin: round;
+}
+.header-notif-btn:hover {
+transform: translateY(-1px);
+box-shadow: 0 8px 18px rgba(0,0,0,0.48), 0 0 14px rgba(229,181,73,0.28), inset 0 1px 0 rgba(255,235,183,0.58);
+}
+.header-badge {
+position: absolute;
+top: -4px;
+right: -4px;
+min-width: 16px;
+height: 16px;
+padding: 0 4px;
+border-radius: 999px;
+background: #ef4444;
+color: #fff;
+font-size: 10px;
+font-weight: 800;
+display: none;
+align-items: center;
+justify-content: center;
+line-height: 1;
+border: 2px solid #0f0f0f;
 }
 
 .inbox-title-wrap {
@@ -2093,22 +2366,67 @@ width: 146px;
   </div>
 </div>
 
+<div id="inboxDrawerBackdrop" onclick="closeInboxDrawer()"></div>
+<div id="inboxDrawer">
+  <div id="inboxDrawerListView">
+    <div class="inbox-drawer-header">
+      <div class="inbox-drawer-title">
+        <h2>Innboks</h2>
+        <span id="inboxUnreadBadge" class="inbox-unread-badge" style="display:none">0</span>
+      </div>
+      <button class="inbox-drawer-close" onclick="closeInboxDrawer()" aria-label="Lukk">&times;</button>
+    </div>
+    <div class="inbox-drawer-list" id="inboxList"></div>
+    <div id="inboxHint" class="inbox-drawer-empty">Logg inn for å se meldinger.</div>
+  </div>
+  <div class="inbox-detail" id="inboxDetailView">
+    <div class="inbox-detail-header">
+      <button class="inbox-detail-back" onclick="closeInboxDetail()" aria-label="Tilbake">&#8592;</button>
+      <div class="inbox-detail-info">
+        <div class="inbox-detail-sender" id="inboxDetailSender"></div>
+        <div class="inbox-detail-subject" id="inboxDetailSubject"></div>
+      </div>
+    </div>
+    <div class="inbox-detail-body" id="inboxDetailBody"></div>
+    <div class="inbox-detail-reply">
+      <textarea id="inboxDetailReplyInput" placeholder="Skriv svar..." oninput="setInboxReplyDraft(_inboxDetailMsgId, this.value)"></textarea>
+      <button type="button" onclick="sendInboxReplyFromDetail()">Send</button>
+    </div>
+  </div>
+</div>
+
 <div class="top-fixed-bar">
+  <div style="display:flex;align-items:center;gap:8px">
   <button type="button" class="header-icon-btn" aria-label="Hjem" onclick="window.location.href='/'">
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M3 11.5L12 4l9 7.5"></path>
       <path d="M6.5 10.5V20h11v-9.5"></path>
     </svg>
   </button>
+  <button type="button" class="header-notif-btn" aria-label="Varsler" onclick="showToast('Ingen nye varsler', 2000)">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+  </button>
+  </div>
   <button type="button" class="post-shortcut fab-add" aria-label="Ny annonse" onclick="openListingFlow()">+</button>
   <div id="selga-toast"></div>
   <div id="imgLightbox" onclick="closeLightbox(event)"><button id="imgLightboxClose" onclick="closeLightbox(event)" aria-label="Lukk">&times;</button><button id="lbPrev" onclick="lbNav(-1,event)" aria-label="Forrige">&#8249;</button><img id="imgLightboxImg" src="" alt="" onclick="event.stopPropagation()"><button id="lbNext" onclick="lbNav(1,event)" aria-label="Neste">&#8250;</button><span id="lbCounter"></span></div>
+  <div style="display:flex;align-items:center;gap:8px">
+  <button type="button" class="header-notif-btn" aria-label="Innboks" onclick="openInboxDrawer()" style="position:relative">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <span id="inboxHeaderBadge" class="header-badge"></span>
+  </button>
   <button type="button" class="profile-shortcut" aria-label="Profilhandling" onclick="openProfileModal(event)">
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="8" r="3.2"></circle>
       <path d="M5 19c1.9-3.2 4.3-4.6 7-4.6s5.1 1.4 7 4.6"/>
     </svg>
   </button>
+  </div>
 </div>
 
 <div id="profileModal" class="profile-modal-backdrop" onclick="closeProfileModal(event)">
@@ -3711,7 +4029,10 @@ function closeLightbox(e) {
   document.body.style.overflow = "";
 }
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") closeLightbox();
+  if (e.key === "Escape") {
+    if (document.getElementById("inboxDrawer").classList.contains("open")) { closeInboxDrawer(); return; }
+    closeLightbox();
+  }
   if (e.key === "ArrowLeft" && document.getElementById("imgLightbox").classList.contains("open")) lbNav(-1);
   if (e.key === "ArrowRight" && document.getElementById("imgLightbox").classList.contains("open")) lbNav(1);
 });
@@ -3868,6 +4189,66 @@ function notifyInstantMessage(title, body) {
   }
 }
 
+let _inboxDetailMsgId = null;
+
+function openInboxDrawer() {
+  document.getElementById("inboxDrawer").classList.add("open");
+  document.getElementById("inboxDrawerBackdrop").classList.add("open");
+  document.body.style.overflow = "hidden";
+  fetchInbox(false);
+}
+
+function closeInboxDrawer() {
+  document.getElementById("inboxDrawer").classList.remove("open");
+  document.getElementById("inboxDrawerBackdrop").classList.remove("open");
+  document.body.style.overflow = "";
+  closeInboxDetail();
+}
+
+function openInboxDetail(msgId, sender, subject, message, time) {
+  _inboxDetailMsgId = msgId;
+  document.getElementById("inboxDetailSender").textContent = sender || "";
+  document.getElementById("inboxDetailSubject").textContent = subject || "";
+  const body = document.getElementById("inboxDetailBody");
+  body.innerHTML = `<div class="inbox-detail-msg">${escapeInboxText(message || "").replace(/\n/g,"<br>")}</div><div class="inbox-detail-time">${time || ""}</div>`;
+  const ta = document.getElementById("inboxDetailReplyInput");
+  ta.value = inboxReplyDrafts[String(msgId)] || "";
+  document.getElementById("inboxDrawerListView").style.display = "none";
+  document.getElementById("inboxDetailView").classList.add("open");
+  markInboxMessageRead(msgId);
+}
+
+function closeInboxDetail() {
+  _inboxDetailMsgId = null;
+  document.getElementById("inboxDrawerListView").style.display = "";
+  document.getElementById("inboxDetailView").classList.remove("open");
+}
+
+async function sendInboxReplyFromDetail() {
+  if (!_inboxDetailMsgId) return;
+  const ta = document.getElementById("inboxDetailReplyInput");
+  const text = (ta.value || "").trim();
+  if (!text) { showToast("Skriv et svar først", 2000); return; }
+  const token = localStorage.getItem("token");
+  if (!token) { showToast("Logg inn for å svare", 2000); return; }
+  const form = new FormData();
+  form.append("message", text);
+  try {
+    const res = await fetch(API + `/messages/${_inboxDetailMsgId}/reply`, {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + token},
+      body: form,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) { showToast(payload.detail || "Kunne ikke sende svar", 3000); return; }
+    setInboxReplyDraft(_inboxDetailMsgId, "");
+    ta.value = "";
+    showToast("Svar sendt", 1800);
+    closeInboxDetail();
+    fetchInbox(false);
+  } catch (_) { showToast("Nettverksfeil", 3000); }
+}
+
 function escapeInboxText(value) {
   return String(value || "").replace(/</g, "&lt;");
 }
@@ -3932,50 +4313,44 @@ function renderInbox(messages, unreadCount) {
   const listEl = document.getElementById("inboxList");
   const hintEl = document.getElementById("inboxHint");
   const badgeEl = document.getElementById("inboxUnreadBadge");
+  const headerBadge = document.getElementById("inboxHeaderBadge");
   if (!listEl || !hintEl || !badgeEl) return;
 
   if (!token) {
     hintEl.style.display = "block";
     hintEl.textContent = "Logg inn for å se meldinger.";
-    listEl.style.display = "none";
     listEl.innerHTML = "";
     badgeEl.style.display = "none";
+    if (headerBadge) headerBadge.style.display = "none";
     return;
   }
 
   if (!messages || messages.length === 0) {
     hintEl.style.display = "block";
     hintEl.textContent = "Ingen meldinger ennå.";
-    listEl.style.display = "none";
     listEl.innerHTML = "";
   } else {
     hintEl.style.display = "none";
-    listEl.style.display = "grid";
     listEl.innerHTML = messages.map((m) => {
       const isRead = (m.status || "").toLowerCase() === "read";
       const safeTitle = escapeInboxText(m.item_title || `Annonse #${m.item_id || "?"}`);
       const safeBuyer = escapeInboxText(m.buyer_username || "ukjent");
       const safeMessage = escapeInboxText(m.message || "");
       const atText = formatInboxTime(m.created_at);
-      const draftReply = escapeInboxTextareaValue(inboxReplyDrafts[String(m.id)] || "");
+      const initial = (m.buyer_username || "?")[0].toUpperCase();
+      const msgPreview = (m.message || "").replace(/\n/g, " ").slice(0, 80);
       return `
-        <div class="inbox-item ${isRead ? "" : "unread"}">
-          <div class="inbox-meta">
-            <span>Fra: <strong>${safeBuyer}</strong></span>
-            <span>${atText}</span>
+        <div class="inbox-card ${isRead ? "" : "unread"}" onclick="openInboxDetail(${m.id}, '${safeBuyer}', '${safeTitle}', ${JSON.stringify(m.message || '')}, '${atText}')">
+          <div class="inbox-avatar">${initial}</div>
+          <div class="inbox-card-body">
+            <div class="inbox-card-top">
+              <span class="inbox-card-sender">${safeBuyer}</span>
+              <span class="inbox-card-time">${atText}</span>
+            </div>
+            <div class="inbox-card-subject">${safeTitle}</div>
+            <div class="inbox-card-preview">${escapeInboxText(msgPreview)}</div>
           </div>
-          <div class="inbox-meta" style="margin-top:-2px;margin-bottom:8px">
-            <span>Om: <strong>${safeTitle}</strong></span>
-            <span>${isRead ? "Lest" : "Ulest"}</span>
-          </div>
-          <p class="inbox-msg">${safeMessage}</p>
-          <div class="inbox-actions">
-            ${isRead ? "" : `<button type="button" class="ghost" onclick="markInboxMessageRead(${m.id})">Marker som lest</button>`}
-          </div>
-          <div class="inbox-reply">
-            <textarea id="inboxReplyInput_${m.id}" placeholder="Skriv svar..." oninput="setInboxReplyDraft(${m.id}, this.value)">${draftReply}</textarea>
-            <button type="button" onclick="sendInboxReply(${m.id})">Svar</button>
-          </div>
+          ${isRead ? "" : "<div class=\"inbox-card-unread-dot\"></div>"}
         </div>
       `;
     }).join("");
@@ -3984,8 +4359,10 @@ function renderInbox(messages, unreadCount) {
   if (unreadCount > 0) {
     badgeEl.style.display = "inline-flex";
     badgeEl.textContent = String(unreadCount);
+    if (headerBadge) { headerBadge.style.display = "inline-flex"; headerBadge.textContent = String(unreadCount); }
   } else {
     badgeEl.style.display = "none";
+    if (headerBadge) headerBadge.style.display = "none";
   }
 }
 
