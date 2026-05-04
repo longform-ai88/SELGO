@@ -3644,6 +3644,7 @@ async function handlePayment(method) {
       redirected = true;
       window.location.href = vippsData.checkout_url;
     } catch (err) {
+      console.error("[Vipps betaling feil]", err);
       showPaymentResult("error", "Nettverksfeil – kunne ikke nå serveren. Prøv igjen om noen sekunder.");
     } finally {
       if (!redirected) {
@@ -3680,14 +3681,21 @@ async function handlePayment(method) {
   form.append("category", document.getElementById("category").value || "");
   form.append("listing_mode", document.getElementById("listingMode").value || "");
 
-  const stripeRes = await fetch(API + "/create-checkout-session", {
-    method: "POST",
-    headers: {"Authorization": "Bearer " + token},
-    body: form
-  });
-
-  const stripeData = await stripeRes.json().catch(()=>({}));
+  let stripeRes, stripeData;
+  try {
+    stripeRes = await fetch(API + "/create-checkout-session", {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + token},
+      body: form
+    });
+    stripeData = await stripeRes.json().catch(()=>({}));
+  } catch (err) {
+    console.error("[Stripe betaling feil]", err);
+    showPublishStatus("Nettverksfeil – kunne ikke nå serveren. Prøv igjen.", true);
+    return;
+  }
   if (!stripeRes.ok || !stripeData.checkout_url) {
+    console.error("[Stripe feil fra server]", stripeData);
     showPublishStatus(stripeData.detail || "Kunne ikke starte Stripe betaling.", true);
     return;
   }
