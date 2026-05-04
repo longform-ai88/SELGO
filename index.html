@@ -4190,6 +4190,7 @@ function notifyInstantMessage(title, body) {
 }
 
 let _inboxDetailMsgId = null;
+let _inboxMessagesMap = {};
 
 function openInboxDrawer() {
   document.getElementById("inboxDrawer").classList.add("open");
@@ -4205,12 +4206,17 @@ function closeInboxDrawer() {
   closeInboxDetail();
 }
 
-function openInboxDetail(msgId, sender, subject, message, time) {
+function openInboxDetail(msgId) {
+  const m = _inboxMessagesMap[String(msgId)];
+  if (!m) return;
   _inboxDetailMsgId = msgId;
-  document.getElementById("inboxDetailSender").textContent = sender || "";
-  document.getElementById("inboxDetailSubject").textContent = subject || "";
+  const safeBuyer = m.buyer_username || "ukjent";
+  const safeTitle = m.item_title || `Annonse #${m.item_id || "?"}`;
+  const atText = formatInboxTime(m.created_at);
+  document.getElementById("inboxDetailSender").textContent = safeBuyer;
+  document.getElementById("inboxDetailSubject").textContent = safeTitle;
   const body = document.getElementById("inboxDetailBody");
-  body.innerHTML = `<div class="inbox-detail-msg">${escapeInboxText(message || "").replace(/\n/g,"<br>")}</div><div class="inbox-detail-time">${time || ""}</div>`;
+  body.innerHTML = `<div class="inbox-detail-msg">${escapeInboxText(m.message || "").replace(/\n/g,"<br>")}</div><div class="inbox-detail-time">${atText}</div>`;
   const ta = document.getElementById("inboxDetailReplyInput");
   ta.value = inboxReplyDrafts[String(msgId)] || "";
   document.getElementById("inboxDrawerListView").style.display = "none";
@@ -4331,16 +4337,17 @@ function renderInbox(messages, unreadCount) {
     listEl.innerHTML = "";
   } else {
     hintEl.style.display = "none";
+    _inboxMessagesMap = {};
+    messages.forEach((m) => { _inboxMessagesMap[String(m.id)] = m; });
     listEl.innerHTML = messages.map((m) => {
       const isRead = (m.status || "").toLowerCase() === "read";
       const safeTitle = escapeInboxText(m.item_title || `Annonse #${m.item_id || "?"}`);
       const safeBuyer = escapeInboxText(m.buyer_username || "ukjent");
-      const safeMessage = escapeInboxText(m.message || "");
       const atText = formatInboxTime(m.created_at);
       const initial = (m.buyer_username || "?")[0].toUpperCase();
-      const msgPreview = (m.message || "").replace(/\n/g, " ").slice(0, 80);
+      const msgPreview = escapeInboxText((m.message || "").replace(/\n/g, " ").slice(0, 80));
       return `
-        <div class="inbox-card ${isRead ? "" : "unread"}" onclick="openInboxDetail(${m.id}, '${safeBuyer}', '${safeTitle}', ${JSON.stringify(m.message || '')}, '${atText}')">
+        <div class="inbox-card ${isRead ? "" : "unread"}" onclick="openInboxDetail(${m.id})">
           <div class="inbox-avatar">${initial}</div>
           <div class="inbox-card-body">
             <div class="inbox-card-top">
@@ -4348,7 +4355,7 @@ function renderInbox(messages, unreadCount) {
               <span class="inbox-card-time">${atText}</span>
             </div>
             <div class="inbox-card-subject">${safeTitle}</div>
-            <div class="inbox-card-preview">${escapeInboxText(msgPreview)}</div>
+            <div class="inbox-card-preview">${msgPreview}</div>
           </div>
           ${isRead ? "" : "<div class=\"inbox-card-unread-dot\"></div>"}
         </div>
