@@ -908,6 +908,45 @@ def mark_inbox_message_read(message_id: int, token: str = Depends(oauth), db: Se
     return {"msg": "ok"}
 
 
+@app.post("/messages/{message_id}/reply")
+def reply_to_inbox_message(
+    message_id: int,
+    message: str = Form(...),
+    token: str = Depends(oauth),
+    db: Session = Depends(get_db),
+):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    original = db.query(ContactMessageDB).filter(ContactMessageDB.id == message_id).first()
+    if not original:
+        raise HTTPException(404, "Melding ikke funnet")
+    if original.seller_username != user.username:
+        raise HTTPException(403, "Ingen tilgang til denne meldingen")
+
+    clean_message = (message or "").strip()
+    if not clean_message:
+        raise HTTPException(400, "Melding kan ikke være tom")
+
+    reply = ContactMessageDB(
+        item_id=original.item_id,
+        buyer_username=user.username,
+        seller_username=original.buyer_username,
+        message=clean_message,
+        status="sent",
+        created_at=datetime.utcnow(),
+    )
+    db.add(reply)
+
+    if (original.status or "").lower() != "read":
+        original.status = "read"
+
+    db.commit()
+    return {"msg": "Svar sendt"}
+
+
 # === AI ASSISTANT ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 

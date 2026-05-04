@@ -1525,6 +1525,11 @@ gap: 10px;
 margin-bottom: 8px;
 }
 
+#inboxPanel {
+max-width: 620px;
+padding: 14px;
+}
+
 .inbox-title-wrap {
 display: flex;
 align-items: center;
@@ -1587,6 +1592,31 @@ word-break: break-word;
 .inbox-actions {
 display: flex;
 justify-content: flex-end;
+gap: 8px;
+flex-wrap: wrap;
+}
+
+.inbox-reply {
+margin-top: 8px;
+display: grid;
+grid-template-columns: 1fr auto;
+gap: 8px;
+align-items: end;
+}
+
+.inbox-reply textarea {
+min-height: 42px;
+max-height: 90px;
+margin: 0;
+padding: 9px 10px;
+font-size: 13px;
+border-radius: 10px;
+}
+
+.inbox-reply button {
+width: auto;
+min-height: 42px;
+padding: 0 12px;
 }
 
 .inbox-empty {
@@ -2127,12 +2157,6 @@ width: 146px;
       <span id="inboxUnreadBadge" class="inbox-unread-badge" style="display:none">0</span>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-      <button type="button" id="inboxSoundToggleBtn" class="ghost" onclick="toggleInboxSound()">Lyd: På</button>
-      <select id="inboxSoundLevel" aria-label="Lydnivå" onchange="setInboxSoundLevel(this.value)" style="height:38px;border-radius:10px;padding:0 10px;background:rgba(255,255,255,0.06);color:rgba(240,220,160,0.9);border:1px solid rgba(212,160,23,0.28)">
-        <option value="low">Lav</option>
-        <option value="medium" selected>Medium</option>
-        <option value="high">Høy</option>
-      </select>
       <button type="button" class="ghost" onclick="fetchInbox(true)">Oppdater</button>
     </div>
   </div>
@@ -3841,6 +3865,48 @@ function notifyInstantMessage(title, body) {
   }
 }
 
+function escapeInboxText(value) {
+  return String(value || "").replace(/</g, "&lt;");
+}
+
+async function sendInboxReply(messageId) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    showToast("Logg inn for å svare", 2200);
+    return;
+  }
+
+  const inputEl = document.getElementById(`inboxReplyInput_${messageId}`);
+  if (!inputEl) return;
+  const text = (inputEl.value || "").trim();
+  if (!text) {
+    showToast("Skriv et svar først", 2200);
+    return;
+  }
+
+  const form = new FormData();
+  form.append("message", text);
+
+  try {
+    const res = await fetch(API + `/messages/${messageId}/reply`, {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + token},
+      body: form,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(payload.detail || "Kunne ikke sende svar", 3200);
+      return;
+    }
+
+    inputEl.value = "";
+    showToast("Svar sendt", 1800);
+    fetchInbox(false);
+  } catch (_) {
+    showToast("Nettverksfeil ved sending av svar", 3200);
+  }
+}
+
 function renderInbox(messages, unreadCount) {
   const token = localStorage.getItem("token");
   const listEl = document.getElementById("inboxList");
@@ -3867,9 +3933,9 @@ function renderInbox(messages, unreadCount) {
     listEl.style.display = "grid";
     listEl.innerHTML = messages.map((m) => {
       const isRead = (m.status || "").toLowerCase() === "read";
-      const safeTitle = (m.item_title || `Annonse #${m.item_id || "?"}`).replace(/</g, "&lt;");
-      const safeBuyer = (m.buyer_username || "ukjent").replace(/</g, "&lt;");
-      const safeMessage = (m.message || "").replace(/</g, "&lt;");
+      const safeTitle = escapeInboxText(m.item_title || `Annonse #${m.item_id || "?"}`);
+      const safeBuyer = escapeInboxText(m.buyer_username || "ukjent");
+      const safeMessage = escapeInboxText(m.message || "");
       const atText = formatInboxTime(m.created_at);
       return `
         <div class="inbox-item ${isRead ? "" : "unread"}">
@@ -3884,6 +3950,10 @@ function renderInbox(messages, unreadCount) {
           <p class="inbox-msg">${safeMessage}</p>
           <div class="inbox-actions">
             ${isRead ? "" : `<button type="button" class="ghost" onclick="markInboxMessageRead(${m.id})">Marker som lest</button>`}
+          </div>
+          <div class="inbox-reply">
+            <textarea id="inboxReplyInput_${m.id}" placeholder="Skriv svar til ${safeBuyer}..."></textarea>
+            <button type="button" onclick="sendInboxReply(${m.id})">Svar</button>
           </div>
         </div>
       `;
