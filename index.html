@@ -3515,6 +3515,8 @@ function openLightbox(idx) {
   const lb = document.getElementById("imgLightbox");
   const img = document.getElementById("imgLightboxImg");
   if (!lb || !img) return;
+  // Move to body so z-index is not limited by parent stacking context
+  if (lb.parentNode !== document.body) document.body.appendChild(lb);
   img.src = _lbUrls[_lbIdx];
   const multi = _lbUrls.length > 1;
   document.getElementById("lbPrev").style.display = multi ? "flex" : "none";
