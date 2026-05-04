@@ -502,12 +502,10 @@ async def create_listing(
 
     image_urls = []
     for f in all_files:
-        ext = Path(f.filename).suffix
-        filename = f"{uuid4().hex}{ext}"
-        dest = UPLOAD_DIR / filename
         content = await f.read()
-        dest.write_bytes(content)
-        image_urls.append(f"uploads/{filename}")
+        mime = f.content_type or "image/jpeg"
+        b64 = base64.b64encode(content).decode("utf-8")
+        image_urls.append(f"data:{mime};base64,{b64}")
 
     image_url = json.dumps(image_urls) if image_urls else None
 
