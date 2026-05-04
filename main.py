@@ -252,10 +252,19 @@ def serve_app():
 
 # === ADMIN: set user as free ===
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "")
+INVITE_CODE = os.getenv("INVITE_CODE", "")
+
+def _is_valid_admin_or_invite_secret(raw_secret: Optional[str]) -> bool:
+    entered = (raw_secret or "").strip()
+    admin_secret = (ADMIN_SECRET or "").strip()
+    invite_secret = (INVITE_CODE or "").strip()
+    if not entered:
+        return False
+    return (admin_secret and entered == admin_secret) or (invite_secret and entered == invite_secret)
 
 @app.post("/admin/set-free")
 def admin_set_free(username: str = Form(...), secret: str = Form(...), db: Session = Depends(get_db)):
-    if not ADMIN_SECRET or secret != ADMIN_SECRET:
+    if not _is_valid_admin_or_invite_secret(secret):
         raise HTTPException(status_code=403, detail="Ikke autorisert")
     user = db.query(UserDB).filter(
         (UserDB.username == username) | (UserDB.phone == username)
@@ -272,8 +281,8 @@ def activate_free_account(
     user: UserDB = Depends(get_user),
     db: Session = Depends(get_db)
 ):
-    if not ADMIN_SECRET or admin_password != ADMIN_SECRET:
-        raise HTTPException(status_code=403, detail="Feil admin-passord")
+    if not _is_valid_admin_or_invite_secret(admin_password):
+        raise HTTPException(status_code=403, detail="Feil passord")
 
     if not bool(user.is_free):
         user.is_free = 1
@@ -282,8 +291,6 @@ def activate_free_account(
     return {"msg": "Gratis tilgang er aktiv", "is_free": True}
 
 # === REGISTER ===
-INVITE_CODE = os.getenv("INVITE_CODE", "")
-
 @app.post("/register")
 def register(username: str = Form(None), password: str = Form(...), phone: str = Form(None), full_name: str = Form(None), invite_code: str = Form(None), db: Session = Depends(get_db)):
     if not username and not phone:
