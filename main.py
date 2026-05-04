@@ -250,6 +250,22 @@ def root():
 def serve_app():
     return FileResponse("index.html")
 
+# === ADMIN: set user as free ===
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "")
+
+@app.post("/admin/set-free")
+def admin_set_free(username: str = Form(...), secret: str = Form(...), db: Session = Depends(get_db)):
+    if not ADMIN_SECRET or secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Ikke autorisert")
+    user = db.query(UserDB).filter(
+        (UserDB.username == username) | (UserDB.phone == username)
+    ).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Bruker ikke funnet")
+    user.is_free = 1
+    db.commit()
+    return {"msg": f"Bruker '{username}' er nå gratis"}
+
 # === REGISTER ===
 INVITE_CODE = os.getenv("INVITE_CODE", "")
 
