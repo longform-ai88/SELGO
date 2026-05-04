@@ -813,3 +813,30 @@ async def create_checkout_session(
 @app.get("/ping")
 def ping():
     return {"status": "ok"}
+
+# === CONTACT SELLER ===
+@app.post("/contact-seller")
+def contact_seller(
+    item_id: int = Form(...),
+    message: str = Form(...),
+    token: str = Depends(oauth),
+    db: Session = Depends(get_db)
+):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    buyer = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not buyer:
+        raise HTTPException(401, "Ikke innlogget")
+
+    owner = db.query(ListingOwnerDB).filter(ListingOwnerDB.item_id == item_id).first()
+    seller_username = owner.username if owner else None
+
+    msg = ContactMessageDB(
+        item_id=item_id,
+        buyer_username=buyer.username,
+        seller_username=seller_username,
+        message=message.strip(),
+        status="sent"
+    )
+    db.add(msg)
+    db.commit()
+    return {"msg": "Melding sendt"}
