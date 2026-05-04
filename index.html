@@ -3021,7 +3021,8 @@ async function createListingWithProvider(providerOverride = null){
     });
     data = await res.json().catch(()=>({}));
   } catch (err) {
-    const msg = "Kunne ikke nå serveren. Sjekk internett og prøv igjen.";
+    console.error("[createListing feil]", err, err?.message);
+    const msg = `Kunne ikke nå serveren: ${err?.message || err}. Sjekk internett og prøv igjen.`;
     showPublishStatus(msg, true);
     return { ok: false, data: { detail: msg } };
   }
