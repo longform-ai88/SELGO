@@ -838,3 +838,38 @@ def contact_seller(
     db.add(msg)
     db.commit()
     return {"msg": "Melding sendt"}
+
+
+# === AI ASSISTANT ===
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
+@app.post("/ai/assist")
+async def ai_assist(message: str = Form(...)):
+    if not OPENAI_API_KEY:
+        return {"reply": "AI-assistenten er ikke konfigurert ennå. Ta kontakt med selger direkte."}
+
+    import urllib.request, urllib.error, json as _json
+    payload = _json.dumps({
+        "model": "gpt-4o-mini",
+        "messages": [
+            {"role": "system", "content": "Du er en hjelpsom kundeservice-assistent for SELGA, en norsk markedsplass. Svar kort og på norsk."},
+            {"role": "user", "content": message}
+        ],
+        "max_tokens": 400,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+            reply = data["choices"][0]["message"]["content"].strip()
+            return {"reply": reply}
+    except Exception as e:
+        return {"reply": f"Kunne ikke nå AI-assistenten akkurat nå. Prøv igjen senere."}
