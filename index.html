@@ -2761,6 +2761,8 @@ function handleSubcatTap(btn) {
   activeSubcat = activeSubcat === sub ? null : sub;
   renderCategoryButtons();
   renderItems();
+  const list = document.getElementById("listTitle");
+  if (list) list.scrollIntoView({behavior: "smooth", block: "start"});
 }
 
 function setLang(l){
