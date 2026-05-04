@@ -1996,15 +1996,13 @@ width: 146px;
     <span class="logo-tagline">Norges markedsplass</span>
   </div>
 </div>
-<div id="freeAccessSection" style="margin:6px 0 12px;display:none">
-  <div style="font-size:11px;color:rgba(240,220,160,0.6);margin-bottom:5px;letter-spacing:0.3px">Familie-tilgang</div>
-  <div style="display:flex;gap:6px;align-items:center">
-    <input id="freeAdminPassword" type="password" placeholder="Admin-passord" autocomplete="off"
-      style="flex:1;height:38px;padding:0 12px;font-size:14px;color:#fff;background:rgba(255,255,255,0.12);border:1px solid rgba(240,180,60,0.35);border-radius:10px;outline:none;min-width:0"
-      onkeydown="if(event.key==='Enter')activateFreeAccess()">
-    <button type="button" id="freeAccessBtn" onclick="activateFreeAccess()"
-      style="height:38px;padding:0 14px;font-size:13px;font-weight:700;white-space:nowrap;border-radius:10px">Aktiver</button>
-  </div>
+<div id="freeAccessSection" style="margin:6px 0 12px;display:none;max-width:260px">
+  <div style="font-size:11px;color:rgba(240,220,160,0.6);margin-bottom:4px;letter-spacing:0.3px">Admin-passord</div>
+  <input id="freeAdminPassword" type="password" placeholder="Skriv passord her" autocomplete="off"
+    style="width:100%;height:38px;padding:0 12px;font-size:14px;color:#fff;background:rgba(255,255,255,0.12);border:1px solid rgba(240,180,60,0.35);border-radius:10px;outline:none;box-sizing:border-box;display:block;margin-bottom:6px"
+    onkeydown="if(event.key==='Enter')activateFreeAccess()">
+  <button type="button" id="freeAccessBtn" onclick="activateFreeAccess()"
+    style="width:100%;height:36px;font-size:12px;font-weight:700;border-radius:10px">Aktiver gratis tilgang</button>
   <div id="freeAccessMsg" style="display:none;margin-top:5px;font-size:11px"></div>
 </div>
 <p id="welcome" class="subtitle"></p>
