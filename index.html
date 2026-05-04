@@ -2998,18 +2998,33 @@ async function createListingWithProvider(providerOverride = null){
     ? imageInput.files
     : (flowImageInput && flowImageInput.files && flowImageInput.files.length > 0 ? flowImageInput.files : null);
   if (imageFiles && imageFiles.length > 0) {
+    if (imageFiles.length > 30) {
+      showPublishStatus("Maks 30 bilder per annonse.", true);
+      return { ok: false, data: { detail: "For mange bilder" } };
+    }
+    const MAX_MB = 8;
     for (const file of imageFiles) {
+      if (file.size > MAX_MB * 1024 * 1024) {
+        showPublishStatus(`Bildet "${file.name}" er for stort (maks ${MAX_MB} MB per bilde).`, true);
+        return { ok: false, data: { detail: "Bilde for stort" } };
+      }
       form.append("images", file);
     }
   }
 
-  const res = await fetch(API + "/listings", {
-    method: "POST",
-    headers: {"Authorization":"Bearer " + token},
-    body: form
-  });
-
-  const data = await res.json().catch(()=>({}));
+  let res, data;
+  try {
+    res = await fetch(API + "/listings", {
+      method: "POST",
+      headers: {"Authorization":"Bearer " + token},
+      body: form
+    });
+    data = await res.json().catch(()=>({}));
+  } catch (err) {
+    const msg = "Kunne ikke nå serveren. Sjekk internett og prøv igjen.";
+    showPublishStatus(msg, true);
+    return { ok: false, data: { detail: msg } };
+  }
   return { ok: res.ok, data };
 }
 
@@ -3628,8 +3643,8 @@ async function handlePayment(method) {
 
       redirected = true;
       window.location.href = vippsData.checkout_url;
-    } catch (_) {
-      showPaymentResult("error", "Nettverksfeil under betaling. Prøv igjen.");
+    } catch (err) {
+      showPaymentResult("error", "Nettverksfeil – kunne ikke nå serveren. Prøv igjen om noen sekunder.");
     } finally {
       if (!redirected) {
         setPayButtonLoading(false, payLabel);
