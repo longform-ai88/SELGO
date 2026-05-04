@@ -1611,6 +1611,8 @@ margin: 0;
 padding: 9px 10px;
 font-size: 13px;
 border-radius: 10px;
+background: #ffffff;
+color: #102039;
 }
 
 .inbox-reply button {
@@ -2644,6 +2646,7 @@ let profileModalMode = "login";
 let inboxPollTimer = null;
 let inboxSeenIds = new Set();
 let inboxInitialized = false;
+let inboxReplyDrafts = {};
 const INBOX_SOUND_KEY = "selga_inbox_sound";
 const INBOX_SOUND_LEVEL_KEY = "selga_inbox_sound_level";
 let inboxSoundEnabled = localStorage.getItem(INBOX_SOUND_KEY) !== "off";
@@ -3869,6 +3872,22 @@ function escapeInboxText(value) {
   return String(value || "").replace(/</g, "&lt;");
 }
 
+function escapeInboxTextareaValue(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function setInboxReplyDraft(messageId, text) {
+  inboxReplyDrafts[String(messageId)] = String(text || "");
+}
+
+function isInboxReplyFocused() {
+  const active = document.activeElement;
+  return !!(active && active.id && active.id.startsWith("inboxReplyInput_"));
+}
+
 async function sendInboxReply(messageId) {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -3899,6 +3918,7 @@ async function sendInboxReply(messageId) {
       return;
     }
 
+    setInboxReplyDraft(messageId, "");
     inputEl.value = "";
     showToast("Svar sendt", 1800);
     fetchInbox(false);
@@ -3937,6 +3957,7 @@ function renderInbox(messages, unreadCount) {
       const safeBuyer = escapeInboxText(m.buyer_username || "ukjent");
       const safeMessage = escapeInboxText(m.message || "");
       const atText = formatInboxTime(m.created_at);
+      const draftReply = escapeInboxTextareaValue(inboxReplyDrafts[String(m.id)] || "");
       return `
         <div class="inbox-item ${isRead ? "" : "unread"}">
           <div class="inbox-meta">
@@ -3952,7 +3973,7 @@ function renderInbox(messages, unreadCount) {
             ${isRead ? "" : `<button type="button" class="ghost" onclick="markInboxMessageRead(${m.id})">Marker som lest</button>`}
           </div>
           <div class="inbox-reply">
-            <textarea id="inboxReplyInput_${m.id}" placeholder="Skriv svar til ${safeBuyer}..."></textarea>
+            <textarea id="inboxReplyInput_${m.id}" placeholder="Skriv svar..." oninput="setInboxReplyDraft(${m.id}, this.value)">${draftReply}</textarea>
             <button type="button" onclick="sendInboxReply(${m.id})">Svar</button>
           </div>
         </div>
@@ -3969,6 +3990,10 @@ function renderInbox(messages, unreadCount) {
 }
 
 async function fetchInbox(showErrors = false) {
+  if (!showErrors && isInboxReplyFocused()) {
+    return;
+  }
+
   const token = localStorage.getItem("token");
   if (!token) {
     renderInbox([], 0);
