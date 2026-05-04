@@ -1252,20 +1252,55 @@ animation: slideUp 0.2s ease-out;
 #imgLightbox {
   display: none;
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.92);
-  z-index: 10000;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.93);
+  z-index: 99999;
   align-items: center;
   justify-content: center;
   cursor: zoom-out;
 }
 #imgLightbox.open { display: flex; }
 #imgLightbox img {
-  max-width: 94vw;
-  max-height: 90vh;
+  max-width: 90vw;
+  max-height: 82vh;
   object-fit: contain;
   border-radius: 10px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  cursor: default;
+  display: block;
+}
+#lbPrev, #lbNext {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.18);
+  border: none;
+  color: #fff;
+  font-size: 34px;
+  width: 48px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 8px;
+  z-index: 100001;
+  transition: background 0.15s;
+  user-select: none;
+}
+#lbPrev { left: 10px; }
+#lbNext { right: 10px; }
+#lbPrev:hover, #lbNext:hover { background: rgba(255,255,255,0.35); }
+#lbCounter {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.75);
+  font-size: 14px;
+  z-index: 100001;
+  pointer-events: none;
 }
 #imgLightboxClose {
   position: fixed;
@@ -1957,7 +1992,7 @@ width: 146px;
   </button>
   <button type="button" class="post-shortcut fab-add" aria-label="Ny annonse" onclick="openListingFlow()">+</button>
   <div id="selga-toast"></div>
-  <div id="imgLightbox" onclick="closeLightbox()"><button id="imgLightboxClose" onclick="closeLightbox()" aria-label="Lukk">&times;</button><img id="imgLightboxImg" src="" alt=""></div>
+  <div id="imgLightbox" onclick="closeLightbox(event)"><button id="imgLightboxClose" onclick="closeLightbox(event)" aria-label="Lukk">&times;</button><button id="lbPrev" onclick="lbNav(-1,event)" aria-label="Forrige">&#8249;</button><img id="imgLightboxImg" src="" alt="" onclick="event.stopPropagation()"><button id="lbNext" onclick="lbNav(1,event)" aria-label="Neste">&#8250;</button><span id="lbCounter"></span></div>
   <button type="button" class="profile-shortcut" aria-label="Profilhandling" onclick="openProfileModal(event)">
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="8" r="3.2"></circle>
@@ -3061,13 +3096,14 @@ function openItemDetail(itemId) {
   if (!modal || !body) return;
 
   const urls = parseImageUrls(item.image_url);
+  _lbUrls = urls.map(u => imgSrc(u));
   let imgHtml = "";
   if (urls.length === 1) {
-    imgHtml = `<img src="${imgSrc(urls[0])}" alt="${item.title}" style="width:100%;max-height:320px;object-fit:cover;border-radius:10px;margin-bottom:14px;cursor:zoom-in" onclick="openLightbox('${imgSrc(urls[0])}')">` ;
+    imgHtml = `<img src="${imgSrc(urls[0])}" alt="${item.title}" style="width:100%;max-height:320px;object-fit:cover;border-radius:10px;margin-bottom:14px;cursor:zoom-in" onclick="openLightbox(0)">` ;
   } else if (urls.length > 1) {
     imgHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-bottom:14px">`;
-    urls.forEach(u => {
-      imgHtml += `<img src="${imgSrc(u)}" alt="${item.title}" style="width:100%;height:140px;object-fit:cover;border-radius:8px;cursor:zoom-in" onclick="openLightbox('${imgSrc(u)}')">`;
+    urls.forEach((u, i) => {
+      imgHtml += `<img src="${imgSrc(u)}" alt="${item.title}" style="width:100%;height:140px;object-fit:cover;border-radius:8px;cursor:zoom-in" onclick="openLightbox(${i})">`;
     });
     imgHtml += `</div>`;
   }
@@ -3472,20 +3508,38 @@ location.reload();
   }
 })();
 
-function openLightbox(src) {
+let _lbUrls = [];
+let _lbIdx = 0;
+function openLightbox(idx) {
+  _lbIdx = idx;
   const lb = document.getElementById("imgLightbox");
   const img = document.getElementById("imgLightboxImg");
   if (!lb || !img) return;
-  img.src = src;
+  img.src = _lbUrls[_lbIdx];
+  const multi = _lbUrls.length > 1;
+  document.getElementById("lbPrev").style.display = multi ? "flex" : "none";
+  document.getElementById("lbNext").style.display = multi ? "flex" : "none";
+  document.getElementById("lbCounter").textContent = multi ? (_lbIdx+1)+" / "+_lbUrls.length : "";
   lb.classList.add("open");
   document.body.style.overflow = "hidden";
 }
-function closeLightbox() {
+function lbNav(dir, e) {
+  if (e) e.stopPropagation();
+  _lbIdx = (_lbIdx + dir + _lbUrls.length) % _lbUrls.length;
+  document.getElementById("imgLightboxImg").src = _lbUrls[_lbIdx];
+  document.getElementById("lbCounter").textContent = (_lbIdx+1)+" / "+_lbUrls.length;
+}
+function closeLightbox(e) {
+  if (e && e.target && e.target.id === "imgLightboxImg") return;
   const lb = document.getElementById("imgLightbox");
   if (lb) lb.classList.remove("open");
   document.body.style.overflow = "";
 }
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeLightbox();
+  if (e.key === "ArrowLeft" && document.getElementById("imgLightbox").classList.contains("open")) lbNav(-1);
+  if (e.key === "ArrowRight" && document.getElementById("imgLightbox").classList.contains("open")) lbNav(1);
+});
 
 let _toastTimer = null;
 function showToast(msg, duration = 3200) {
