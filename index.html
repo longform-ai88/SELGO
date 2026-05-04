@@ -3002,13 +3002,30 @@ async function createListingWithProvider(providerOverride = null){
       showPublishStatus("Maks 30 bilder per annonse.", true);
       return { ok: false, data: { detail: "For mange bilder" } };
     }
-    const MAX_MB = 8;
+    showPublishStatus("Komprimerer bilder...", false);
+    const compressImage = (file) => new Promise((resolve) => {
+      const MAX_PX = 1600;
+      const QUALITY = 0.72;
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > MAX_PX || height > MAX_PX) {
+          if (width > height) { height = Math.round(height * MAX_PX / width); width = MAX_PX; }
+          else { width = Math.round(width * MAX_PX / height); height = MAX_PX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => resolve(blob || file), "image/jpeg", QUALITY);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
     for (const file of imageFiles) {
-      if (file.size > MAX_MB * 1024 * 1024) {
-        showPublishStatus(`Bildet "${file.name}" er for stort (maks ${MAX_MB} MB per bilde).`, true);
-        return { ok: false, data: { detail: "Bilde for stort" } };
-      }
-      form.append("images", file);
+      const compressed = await compressImage(file);
+      form.append("images", compressed, file.name.replace(/\.[^.]+$/, ".jpg"));
     }
   }
 
