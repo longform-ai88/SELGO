@@ -3256,6 +3256,8 @@ async function login(mode){
   if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = "Laster..."; }
   try {
   const form = new FormData();
+  const inviteCode = (document.getElementById(mode === "mobile" ? "mobileInviteCode" : "inviteCode")?.value || "").trim();
+  if (inviteCode) form.append("invite_code", inviteCode);
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
     const pw = document.getElementById("phonePassword").value;

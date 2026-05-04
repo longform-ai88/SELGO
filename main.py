@@ -298,11 +298,19 @@ def register(username: str = Form(None), password: str = Form(...), phone: str =
 # === LOGIN ===
 @app.post("/login")
 def login(
-    username: str = Form(...),
+    username: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
     password: str = Form(...),
+    invite_code: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    user = db.query(UserDB).filter(UserDB.username == username).first()
+    identifier = (username or phone or "").strip()
+    if not identifier:
+        raise HTTPException(400, "Brukernavn eller mobilnummer er påkrevd")
+
+    user = db.query(UserDB).filter(
+        (UserDB.username == identifier) | (UserDB.phone == identifier)
+    ).first()
 
     if not user:
         raise HTTPException(401, "Feil login")
@@ -310,7 +318,12 @@ def login(
     if not pwd.verify(password, user.password):
         raise HTTPException(401, "Feil login")
 
-    return {"access_token": create_token(user.username)}
+    # Allow existing accounts to be upgraded to free access with invite code.
+    if INVITE_CODE and invite_code and invite_code.strip() == INVITE_CODE and not bool(user.is_free):
+        user.is_free = 1
+        db.commit()
+
+    return {"access_token": create_token(user.username), "is_free": bool(user.is_free)}
 
 # === VIPPS LOGIN (OIDC) ===
 @app.get("/auth/vipps/url")
