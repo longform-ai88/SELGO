@@ -56,7 +56,7 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "items", "listing_type", "VARCHAR")
     _add_column_if_missing(_conn, "items", "listing_price_paid", "FLOAT DEFAULT 0")
     _add_column_if_missing(_conn, "items", "listing_duration_days", "INTEGER DEFAULT 60")
-    _add_column_if_missing(_conn, "items", "expires_at", "DATETIME")
+    _add_column_if_missing(_conn, "items", "expires_at", "TIMESTAMP")
     _add_column_if_missing(_conn, "items", "is_featured", "INTEGER DEFAULT 0")
     _add_column_if_missing(_conn, "items", "boost_selected", "INTEGER DEFAULT 0")
     _add_column_if_missing(_conn, "items", "address", "VARCHAR")
@@ -69,12 +69,12 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "payment_orders", "provider_reference", "VARCHAR")
     _add_column_if_missing(_conn, "payment_orders", "listing_type", "VARCHAR")
     _add_column_if_missing(_conn, "payment_orders", "listing_duration_days", "INTEGER")
-    _add_column_if_missing(_conn, "payment_orders", "expires_at", "DATETIME")
+    _add_column_if_missing(_conn, "payment_orders", "expires_at", "TIMESTAMP")
     _add_column_if_missing(_conn, "payment_orders", "item_price", "FLOAT")
-    _add_column_if_missing(_conn, "payment_orders", "created_at", "DATETIME")
+    _add_column_if_missing(_conn, "payment_orders", "created_at", "TIMESTAMP")
 
     _add_column_if_missing(_conn, "contact_messages", "status", "VARCHAR DEFAULT 'sent'")
-    _add_column_if_missing(_conn, "contact_messages", "created_at", "DATETIME")
+    _add_column_if_missing(_conn, "contact_messages", "created_at", "TIMESTAMP")
 
     _conn.commit()
 
