@@ -1996,6 +1996,15 @@ width: 146px;
     <span class="logo-tagline">Norges markedsplass</span>
   </div>
 </div>
+<div id="freeAccessSection" class="panel" style="margin:10px 0 14px;padding:14px 16px;display:none">
+  <div style="font-weight:700;color:#1a3557;margin-bottom:8px">Familie-tilgang</div>
+  <div style="font-size:13px;color:#476086;margin-bottom:10px">Skriv admin-passord for å aktivere gratis tilgang på denne kontoen.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <input id="freeAdminPassword" type="password" placeholder="Admin-passord" autocomplete="off" style="flex:1;min-width:180px">
+    <button type="button" id="freeAccessBtn" onclick="activateFreeAccess()">Aktiver gratis</button>
+  </div>
+  <div id="freeAccessMsg" style="display:none;margin-top:8px;font-size:13px"></div>
+</div>
 <p id="welcome" class="subtitle"></p>
 
 <h2 id="listTitle"></h2>
@@ -3236,18 +3245,83 @@ function updateAuthUI() {
     const registerBtn = document.getElementById("registerBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const authPanel = document.getElementById("authPanel");
+    const freeAccessSection = document.getElementById("freeAccessSection");
 
     if (token) {
         if (authPanel) authPanel.style.display = "none";
         if (loginBtn) loginBtn.style.display = "none";
         if (registerBtn) registerBtn.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "";
+        if (freeAccessSection) freeAccessSection.style.display = "block";
     } else {
         if (authPanel) authPanel.style.display = "";
         if (loginBtn) loginBtn.style.display = "";
         if (registerBtn) registerBtn.style.display = "";
         if (logoutBtn) logoutBtn.style.display = "none";
+        if (freeAccessSection) freeAccessSection.style.display = "none";
     }
+}
+
+async function activateFreeAccess() {
+  const token = localStorage.getItem("token");
+  const pwdInput = document.getElementById("freeAdminPassword");
+  const btn = document.getElementById("freeAccessBtn");
+  const msgEl = document.getElementById("freeAccessMsg");
+  if (!token) {
+    if (msgEl) {
+      msgEl.style.display = "block";
+      msgEl.style.color = "#7a1f1f";
+      msgEl.textContent = "Logg inn først.";
+    }
+    return;
+  }
+
+  const adminPassword = (pwdInput?.value || "").trim();
+  if (!adminPassword) {
+    if (msgEl) {
+      msgEl.style.display = "block";
+      msgEl.style.color = "#7a1f1f";
+      msgEl.textContent = "Skriv admin-passord.";
+    }
+    return;
+  }
+
+  const form = new FormData();
+  form.append("admin_password", adminPassword);
+  if (btn) { btn.disabled = true; btn.textContent = "Aktiverer..."; }
+
+  try {
+    const res = await fetchWithAutoApi("/account/activate-free", {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + token},
+      body: form
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (msgEl) {
+        msgEl.style.display = "block";
+        msgEl.style.color = "#7a1f1f";
+        msgEl.textContent = data.detail || "Kunne ikke aktivere gratis tilgang.";
+      }
+      return;
+    }
+
+    if (pwdInput) pwdInput.value = "";
+    if (msgEl) {
+      msgEl.style.display = "block";
+      msgEl.style.color = "#1a5c2a";
+      msgEl.textContent = "Gratis tilgang er aktiv på denne kontoen.";
+    }
+    showToast("Gratis tilgang aktivert", 3500);
+  } catch (_) {
+    if (msgEl) {
+      msgEl.style.display = "block";
+      msgEl.style.color = "#7a1f1f";
+      msgEl.textContent = "Nettverksfeil. Prøv igjen.";
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Aktiver gratis"; }
+  }
 }
 
 async function login(mode){

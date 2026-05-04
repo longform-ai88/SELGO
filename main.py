@@ -266,6 +266,21 @@ def admin_set_free(username: str = Form(...), secret: str = Form(...), db: Sessi
     db.commit()
     return {"msg": f"Bruker '{username}' er nå gratis"}
 
+@app.post("/account/activate-free")
+def activate_free_account(
+    admin_password: str = Form(...),
+    user: UserDB = Depends(get_user),
+    db: Session = Depends(get_db)
+):
+    if not ADMIN_SECRET or admin_password != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Feil admin-passord")
+
+    if not bool(user.is_free):
+        user.is_free = 1
+        db.commit()
+
+    return {"msg": "Gratis tilgang er aktiv", "is_free": True}
+
 # === REGISTER ===
 INVITE_CODE = os.getenv("INVITE_CODE", "")
 
