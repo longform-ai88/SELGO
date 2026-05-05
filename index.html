@@ -2606,6 +2606,24 @@ width: 146px;
   <p id="vippsStatus" style="font-size:12px;color:#e05000;margin-top:12px;display:none"></p>
 </div>
 
+<!-- Dedicated Login Pane (shown after email verification) -->
+<div class="auth-pane" id="pane-login">
+  <div class="field">
+    <label for="loginUsername">Brukernavn eller mobilnummer</label>
+    <input id="loginUsername" type="text" placeholder="Skriv inn brukernavn eller telefon" autocomplete="username">
+  </div>
+  <div class="field">
+    <label for="loginPassword">Passord</label>
+    <input id="loginPassword" type="password" placeholder="Skriv inn passord" autocomplete="current-password">
+  </div>
+  <div class="auth-actions">
+    <button type="button" id="dedicatedLoginBtn" onclick="loginDedicated()">Logg inn</button>
+    <div class="auth-secondary-note">Ikke registrert ennå?</div>
+    <button type="button" class="ghost" onclick="switchAuthTab('username')">Registrer her</button>
+  </div>
+  <div id="dedicatedLoginError" style="display:none;margin-top:12px;font-size:13px;color:#c0392b"></div>
+</div>
+
 </div>
 
 <div class="panel" id="addPanel">
@@ -4060,6 +4078,58 @@ async function login(mode){
   }
 }
 
+async function loginDedicated() {
+  const btn = document.getElementById("dedicatedLoginBtn");
+  const msgEl = document.getElementById("dedicatedLoginError");
+  const origText = btn ? btn.textContent : "";
+  
+  const identifier = (document.getElementById("loginUsername")?.value || "").trim();
+  const password = document.getElementById("loginPassword")?.value || "";
+  
+  if (!identifier || !password) {
+    if (msgEl) { msgEl.style.display = "block"; msgEl.textContent = "Fyll inn brukernavn/mobilnummer og passord"; }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "Logger inn..."; }
+  if (msgEl) { msgEl.style.display = "none"; }
+
+  try {
+    const form = new FormData();
+    // Try username first, if it looks like a phone number, use phone
+    if (/^\d+$/.test(identifier)) {
+      form.append("phone", identifier);
+    } else {
+      form.append("username", identifier);
+    }
+    form.append("password", password);
+
+    let res;
+    try {
+      res = await fetchWithAutoApi("/login", { method: "POST", body: form });
+    } catch (err) {
+      res = await fetch(window.location.origin + "/login", { method: "POST", body: form });
+    }
+
+    if (!res.ok) {
+      const err = await readErrorPayload(res);
+      if (msgEl) { msgEl.style.display = "block"; msgEl.textContent = err.detail || "Innlogging feilet. Prøv igjen."; }
+      if (btn) { btn.disabled = false; btn.textContent = origText; }
+      return;
+    }
+
+    const data = await res.json();
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
+    updateAuthUI();
+    showToast("Innlogget!", 2000);
+    setTimeout(() => location.reload(), 500);
+  } catch (e) {
+    if (msgEl) { msgEl.style.display = "block"; msgEl.textContent = "Nettverksfeil. Sjekk internett og prøv igjen."; }
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }
+}
+
 // Stores pending username between registration and OTP verification
 let _pendingVerifyUsername = "";
 
@@ -4210,29 +4280,30 @@ async function verifyEmail() {
       fetchItems();
       showToast("Konto bekreftet! Velkommen til SELGA.", 3000);
     } else {
-      // Verification succeeded but no auto-login: transition to login form
-      showAuthMsg("E-post bekreftet! Logg nå inn med dine opplysninger.", false);
-      // Show login form with pre-filled identifier
-      const isPhoneIdentifier = /^\d+$/.test(_pendingVerifyUsername || "");
-      if (isPhoneIdentifier) {
-        switchAuthTab("mobile");
-        setTimeout(() => { 
-          const el = document.getElementById("phoneInput"); 
-          if (el) el.value = _pendingVerifyUsername; 
-          el?.focus();
-        }, 50);
-      } else {
-        switchAuthTab("username");
-        setTimeout(() => { 
-          const el = document.getElementById("username"); 
-          if (el) el.value = _pendingVerifyUsername; 
-          el?.focus();
-        }, 50);
+      // Verification succeeded but no auto-login: show dedicated login form
+      document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+      const loginPane = document.getElementById("pane-login");
+      if (loginPane) loginPane.classList.add("active");
+      
+      // Pre-fill the username/phone field
+      setTimeout(() => { 
+        const el = document.getElementById("loginUsername"); 
+        if (el) {
+          el.value = _pendingVerifyUsername;
+          el.focus();
+        }
+      }, 50);
+      
+      // Show success message
+      const errEl = document.getElementById("dedicatedLoginError");
+      if (errEl) { 
+        errEl.style.display = "none"; 
       }
-      // Ensure auth panel is visible
+      
+      // Ensure auth panel is visible and scroll to top
       const authPanel = document.getElementById("authPanel");
       if (authPanel) authPanel.style.display = "";
-      // Scroll to login form
       window.scrollTo(0, 0);
     }
     if (btn) { btn.disabled = false; btn.textContent = "Bekreft e-post"; }
