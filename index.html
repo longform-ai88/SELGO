@@ -2781,6 +2781,7 @@ width: 146px;
 // Set window.SELGA_API_BASE in a deployment config or environment to override.
 // For local dev: http://127.0.0.1:8000
 // For production: https://selga.no
+const SELGA_CANONICAL_API = "https://selga.no";
 let API = (() => {
   const normalize = (value) => (value || "").trim().replace(/\/$/, "");
   const host = (window.location.hostname || "").toLowerCase();
@@ -2800,11 +2801,12 @@ let API = (() => {
     return "http://127.0.0.1:8000";
   }
 
-  // In production, default to same-origin to avoid stale stored API URLs.
+  // In production, prefer canonical API host to avoid www/non-www redirect issues.
+  if (host === "selga.no" || host === "www.selga.no") return SELGA_CANONICAL_API;
   if (origin && origin !== "null") return origin;
 
   if (fromStorage) return fromStorage;
-  return "https://selga.no";
+  return SELGA_CANONICAL_API;
 })();
 
 function getApiCandidates() {
@@ -2819,6 +2821,8 @@ function getApiCandidates() {
     API,
     fromQuery,
     fromWindow,
+    SELGA_CANONICAL_API,
+    "https://www.selga.no",
     origin,
     fromStorage,
     "https://sego-qmo1.onrender.com",
@@ -2891,6 +2895,22 @@ async function fetchWithAutoApi(path, options = {}) {
   const resolved = await ensureWorkingApiBase();
   if (resolved && resolved !== currentBase) {
     return run(resolved);
+  }
+
+  // Last-resort direct attempts on known production hosts.
+  if (!firstResponse) {
+    const fallbacks = [SELGA_CANONICAL_API, "https://www.selga.no"];
+    for (const fb of fallbacks) {
+      if (!fb || fb === currentBase) continue;
+      try {
+        const resp = await run(fb);
+        if (resp) {
+          API = fb;
+          saveApiBase(fb);
+          return resp;
+        }
+      } catch (_) {}
+    }
   }
 
   if (firstResponse) return firstResponse;
