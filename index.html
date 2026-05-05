@@ -3812,15 +3812,22 @@ function logoutFromProfileModal() {
 }
 
 function deleteAccountFromProfileModal() {
-  const modal = document.getElementById("deleteConfirmModal");
-  const msg = document.getElementById("deleteConfirmMsg");
-  if (msg) { msg.style.display = "none"; msg.textContent = ""; }
-  const btn = document.getElementById("confirmDeleteBtn");
-  if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
-  // Close profile modal first so delete modal appears on top cleanly
-  const profileBackdrop = document.getElementById("profileModal");
-  if (profileBackdrop) profileBackdrop.style.display = "none";
-  if (modal) modal.style.display = "flex";
+  // Show confirm UI inside the profile modal body (avoids z-index issues)
+  const body = document.getElementById("profileModalBody");
+  const title = document.getElementById("profileModalTitle");
+  if (!body) return;
+  if (title) title.textContent = "Slett konto";
+  body.innerHTML = `
+    <div style="text-align:center;padding:8px 0">
+      <p style="font-size:15px;line-height:1.6;color:#c0392b;font-weight:700;margin:0 0 6px">⚠️ Er du sikker?</p>
+      <p style="font-size:14px;line-height:1.55;color:#1a3557;margin-bottom:24px">All data slettes permanent og kan ikke gjenopprettes. Alle dine annonser vil bli fjernet.</p>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button type="button" class="ghost" onclick="renderProfileModalBody()">Avbryt</button>
+        <button type="button" id="confirmDeleteBtn" style="background:#c0392b;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:700;cursor:pointer" onclick="_doDeleteAccount()">Slett konto</button>
+      </div>
+      <div id="deleteConfirmMsg" style="display:none;margin-top:12px;font-size:13px"></div>
+    </div>
+  `;
 }
 
 async function _doDeleteAccount() {
@@ -3841,8 +3848,8 @@ async function _doDeleteAccount() {
       if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
       return;
     }
-    document.getElementById("deleteConfirmModal").style.display = "none";
-    closeProfileModal();
+    const profileBackdrop = document.getElementById("profileModal");
+    if (profileBackdrop) profileBackdrop.style.display = "none";
     localStorage.removeItem("token");
     updateAuthUI();
     showToast("Kontoen din er slettet.", 3000);
@@ -3855,14 +3862,14 @@ async function _doDeleteAccount() {
         headers: { "Authorization": "Bearer " + token }
       });
       if (resp2.ok) {
-        document.getElementById("deleteConfirmModal").style.display = "none";
-        closeProfileModal();
+        const profileBackdrop2 = document.getElementById("profileModal");
+        if (profileBackdrop2) profileBackdrop2.style.display = "none";
         localStorage.removeItem("token");
         updateAuthUI();
         showToast("Kontoen din er slettet.", 3000);
         return;
       }
-    } catch(_) {}
+    } catch (_) {}
     if (msg) { msg.style.display = "block"; msg.style.color = "#c0392b"; msg.textContent = "Nettverksfeil. Sjekk internett og prøv igjen."; }
     if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
   }
