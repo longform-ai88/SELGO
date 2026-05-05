@@ -85,6 +85,24 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "users", "email_verified", "INTEGER DEFAULT 0")
     _add_column_if_missing(_conn, "users", "email_token", "VARCHAR")
 
+    # Normalize boolean columns to INTEGER for PostgreSQL compatibility
+    db_url = str(engine.url)
+    if "postgresql" in db_url or "postgres" in db_url:
+        for tbl, col in [
+            ("users", "email_verified"),
+            ("users", "is_verified"),
+            ("users", "is_free"),
+            ("items", "is_featured"),
+            ("items", "boost_selected"),
+        ]:
+            try:
+                _conn.execute(text(
+                    f"ALTER TABLE {tbl} ALTER COLUMN {col} TYPE INTEGER USING {col}::INTEGER"
+                ))
+                _conn.commit()
+            except Exception:
+                _conn.rollback()
+
     _conn.commit()
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
