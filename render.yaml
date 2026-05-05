@@ -19,15 +19,15 @@ services:
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: SMTP_HOST
-        value: smtp.gmail.com
+        value: smtp-relay.brevo.com
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_USER
-        value: contact@longform-ai88.com
+        value: aa5656001@smtp-brevo.com
       - key: SMTP_PASS
         sync: false
       - key: FROM_EMAIL
-        value: tobias.mikkelsen-86@hotmail.com
+        value: no-reply@selga.no
     disk:
       name: selga-data
       mountPath: /data
