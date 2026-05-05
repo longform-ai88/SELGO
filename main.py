@@ -152,9 +152,12 @@ VIPPS_LOGIN_STATES: Dict[str, Dict[str, Any]] = {}
 VIPPS_STATE_TTL_SECONDS = 600
 
 # === EMAIL CONFIG ===
-BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "tobias.mikkelsen-86@hotmail.com")
-FROM_NAME = os.getenv("FROM_NAME", "SELGA")
+def _clean_env(value: str) -> str:
+    return (value or "").strip().strip('"').strip("'")
+
+BREVO_API_KEY = _clean_env(os.getenv("BREVO_API_KEY", ""))
+FROM_EMAIL = _clean_env(os.getenv("FROM_EMAIL", "tobias.mikkelsen-86@hotmail.com"))
+FROM_NAME = _clean_env(os.getenv("FROM_NAME", "SELGA"))
 
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth = OAuth2PasswordBearer(tokenUrl="login")
@@ -311,6 +314,13 @@ def _send_verification_email(to_email: str, otp: str) -> None:
         )
         with urllib.request.urlopen(req, timeout=15) as resp:
             print(f"[EMAIL-OTP] Sent OK to {to_email} status={resp.status}")
+    except urllib.error.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.read().decode("utf-8")
+        except Exception:
+            body = ""
+        print(f"[EMAIL-OTP] API error (HTTP {exc.code}): {body or exc.reason}")
     except Exception as exc:
         print(f"[EMAIL-OTP] API error ({type(exc).__name__}): {exc}")
 
