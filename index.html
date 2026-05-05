@@ -4110,11 +4110,36 @@ async function register(mode){
   }
 }
 
+function switchAuthTab(mode) {
+  // Hide all panes
+  document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
+  
+  // Show target pane and tab
+  const paneId = mode === "mobile" ? "pane-mobile" : mode === "vipps" ? "pane-vipps" : "pane-username";
+  const pane = document.getElementById(paneId);
+  if (pane) pane.classList.add("active");
+  
+  // Find and activate corresponding tab button
+  const tabs = Array.from(document.querySelectorAll(".auth-tab"));
+  for (const tab of tabs) {
+    const text = tab.textContent.toLowerCase();
+    const isMatch = (mode === "mobile" && text.includes("mobilnummer")) ||
+                    (mode === "vipps" && text.includes("vipps")) ||
+                    (mode === "username" && text.includes("brukernavn"));
+    if (isMatch) {
+      tab.classList.add("active");
+      break;
+    }
+  }
+}
+
 function showVerifyEmailPane() {
   // Hide all panes, show the verify pane
-  document.querySelectorAll(".auth-pane").forEach(p => p.style.display = "none");
+  document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
   const vp = document.getElementById("pane-verify-email");
-  if (vp) vp.style.display = "";
+  if (vp) vp.classList.add("active");
   const msgEl = document.getElementById("verifyEmailMsg");
   if (msgEl) { msgEl.style.display = "block"; msgEl.style.color = "rgba(240,220,160,0.7)"; msgEl.textContent = "Sjekk innboksen din (og spam-mappen) for bekreftelseskoden."; }
 }
@@ -4146,7 +4171,17 @@ async function verifyEmail() {
       fetchItems();
       showToast("Konto bekreftet! Velkommen til SELGA.", 3000);
     } else {
-      if (msgEl) { msgEl.style.display="block"; msgEl.style.color="#a8dfb8"; msgEl.textContent="E-post bekreftet! Du kan nå logge inn."; }
+      // Verification succeeded but no auto-login: transition to login form
+      showAuthMsg("E-post bekreftet! Logg nå inn med dine opplysninger.", false);
+      // Show login form with pre-filled identifier
+      const isPhoneIdentifier = /^\d+$/.test(_pendingVerifyUsername || "");
+      if (isPhoneIdentifier) {
+        switchAuthTab("mobile");
+        setTimeout(() => { const el = document.getElementById("phoneInput"); if (el) el.value = _pendingVerifyUsername; }, 50);
+      } else {
+        switchAuthTab("username");
+        setTimeout(() => { const el = document.getElementById("username"); if (el) el.value = _pendingVerifyUsername; }, 50);
+      }
     }
     if (btn) { btn.disabled = false; btn.textContent = "Bekreft e-post"; }
   } catch(e) {
