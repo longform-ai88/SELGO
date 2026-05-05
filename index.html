@@ -4019,10 +4019,26 @@ async function login(mode){
     form.append("password", pw);
   }
 
-  const res = await fetchWithAutoApi("/login", {
-    method: "POST",
-    body: form
-  });
+  let res;
+  try {
+    res = await fetchWithAutoApi("/login", {
+      method: "POST",
+      body: form
+    });
+  } catch (err) {
+    // Fallback: try direct origin fetch if API base fails
+    try {
+      res = await fetch(window.location.origin + "/login", {
+        method: "POST",
+        body: form
+      });
+    } catch (_) {
+      if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
+      showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
+      return;
+    }
+  }
+
   if (!res.ok) {
     const err = await readErrorPayload(res);
     showAuthMsg(`Innlogging feilet (${res.status}). ${err.detail || ""}`.trim(), true);
@@ -4090,10 +4106,26 @@ async function register(mode){
   const inviteCode = (document.getElementById(mode === "mobile" ? "mobileInviteCode" : "inviteCode")?.value || "").trim();
   if (inviteCode) form.append("invite_code", inviteCode);
 
-  const res = await fetchWithAutoApi("/register", {
-    method: "POST",
-    body: form
-  });
+  let res;
+  try {
+    res = await fetchWithAutoApi("/register", {
+      method: "POST",
+      body: form
+    });
+  } catch (err) {
+    // Fallback: try direct origin fetch if API base fails
+    try {
+      res = await fetch(window.location.origin + "/register", {
+        method: "POST",
+        body: form
+      });
+    } catch (_) {
+      if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
+      showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
+      return;
+    }
+  }
+
   if (!res.ok) {
     const err = await readErrorPayload(res);
     showAuthMsg(`Registrering feilet (${res.status}). ${err.detail || ""}`.trim(), true);
@@ -4157,7 +4189,14 @@ async function verifyEmail() {
     const form = new FormData();
     form.append("username", _pendingVerifyUsername);
     form.append("code", code);
-    const res = await fetchWithAutoApi("/verify-email", { method: "POST", body: form });
+    let res;
+    try {
+      res = await fetchWithAutoApi("/verify-email", { method: "POST", body: form });
+    } catch (err) {
+      // Fallback: try direct origin fetch if API base fails
+      res = await fetch(window.location.origin + "/verify-email", { method: "POST", body: form });
+    }
+
     if (!res.ok) {
       const err = await readErrorPayload(res);
       if (msgEl) { msgEl.style.display="block"; msgEl.style.color="#e57373"; msgEl.textContent = err.detail || "Feil kode. Prøv igjen."; }
@@ -4196,7 +4235,14 @@ async function resendVerificationCode() {
   try {
     const form = new FormData();
     form.append("username", _pendingVerifyUsername);
-    const res = await fetchWithAutoApi("/resend-verification", { method: "POST", body: form });
+    let res;
+    try {
+      res = await fetchWithAutoApi("/resend-verification", { method: "POST", body: form });
+    } catch (err) {
+      // Fallback: try direct origin fetch if API base fails
+      res = await fetch(window.location.origin + "/resend-verification", { method: "POST", body: form });
+    }
+
     if (msgEl) {
       msgEl.style.display = "block";
       if (res.ok) {
