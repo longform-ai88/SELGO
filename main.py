@@ -152,11 +152,9 @@ VIPPS_LOGIN_STATES: Dict[str, Dict[str, Any]] = {}
 VIPPS_STATE_TTL_SECONDS = 600
 
 # === EMAIL CONFIG ===
-SMTP_HOST = os.getenv("SMTP_HOST", "")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASS = os.getenv("SMTP_PASS", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@selga.no")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "tobias.mikkelsen-86@hotmail.com")
+FROM_NAME = os.getenv("FROM_NAME", "SELGA")
 
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth = OAuth2PasswordBearer(tokenUrl="login")
@@ -269,14 +267,7 @@ def _generate_otp() -> str:
     return str(random.randint(100000, 999999))
 
 def _send_verification_email(to_email: str, otp: str) -> None:
-    """Send OTP verification email. Falls back to console log if SMTP not configured."""
-    if not SMTP_HOST or not SMTP_USER:
-        print(f"[EMAIL-OTP] To: {to_email}  Code: {otp}")
-        return
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "SELGA – Bekreft e-postadressen din"
-    msg["From"] = FROM_EMAIL
-    msg["To"] = to_email
+    """Send OTP via Brevo HTTP API (works on Render free tier — no SMTP port needed)."""
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#1c1408;color:#f0dfa8;padding:32px;border-radius:12px">
       <h2 style="color:#f6cf74;margin-bottom:8px">Velkommen til SELGA</h2>
@@ -285,17 +276,32 @@ def _send_verification_email(to_email: str, otp: str) -> None:
       <p style="font-size:13px;color:rgba(240,220,160,0.6)">Koden er gyldig i 30 minutter. Deles ikke med andre.</p>
     </div>
     """
-    msg.attach(MIMEText(html, "html"))
-    print(f"[EMAIL-OTP] Sending to {to_email} via {SMTP_HOST}:{SMTP_PORT} user={SMTP_USER} from={FROM_EMAIL}")
+    if not BREVO_API_KEY:
+        print(f"[EMAIL-OTP] No API key — To: {to_email}  Code: {otp}")
+        return
+    payload = {
+        "sender": {"name": FROM_NAME, "email": FROM_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": "SELGA – Bekreft e-postadressen din",
+        "htmlContent": html,
+    }
+    print(f"[EMAIL-OTP] Sending to {to_email} via Brevo API from={FROM_EMAIL}")
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as s:
-            s.starttls()
-            s.login(SMTP_USER, SMTP_PASS)
-            s.sendmail(FROM_EMAIL, [to_email], msg.as_string())
-        print(f"[EMAIL-OTP] Sent OK to {to_email}")
+        import urllib.request, json as _json
+        req = urllib.request.Request(
+            "https://api.brevo.com/v3/smtp/email",
+            data=_json.dumps(payload).encode(),
+            headers={
+                "api-key": BREVO_API_KEY,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            print(f"[EMAIL-OTP] Sent OK to {to_email} status={resp.status}")
     except Exception as exc:
-        print(f"[EMAIL-OTP] SMTP error ({type(exc).__name__}): {exc}")
-        # Don't raise — OTP is saved in DB, admin can look it up
+        print(f"[EMAIL-OTP] API error ({type(exc).__name__}): {exc}")
 
 # === DB ===
 def get_db():

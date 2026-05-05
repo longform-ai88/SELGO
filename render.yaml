@@ -18,16 +18,12 @@ services:
         value: /data/uploads
       - key: STRIPE_SECRET_KEY
         sync: false
-      - key: SMTP_HOST
-        value: smtp-relay.brevo.com
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USER
-        value: aa5656001@smtp-brevo.com
-      - key: SMTP_PASS
+      - key: BREVO_API_KEY
         sync: false
       - key: FROM_EMAIL
         value: tobias.mikkelsen-86@hotmail.com
+      - key: FROM_NAME
+        value: SELGA
     disk:
       name: selga-data
       mountPath: /data
