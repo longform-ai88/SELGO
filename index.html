@@ -2491,7 +2491,7 @@ width: 146px;
 
 <div class="auth-card-header">
   <div class="auth-logo" aria-hidden="true">S</div>
-  <div class="auth-eyebrow">SELGA konto</div>
+  <div class="auth-eyebrow">SELGA KONTO</div>
   <h2 class="auth-title">Logg inn</h2>
   <p class="auth-subtitle">Fortsett til selga.no</p>
 </div>
@@ -4213,7 +4213,10 @@ function openRegisterFromEmail() {
   const email = (document.getElementById("loginEmail")?.value || "").trim().toLowerCase();
   const regEmail = document.getElementById("registerEmail");
   if (email && regEmail) regEmail.value = email;
-  switchAuthTab("register");
+  document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
+  const pane = document.getElementById("pane-register");
+  if (pane) pane.classList.add("active");
+  window.scrollTo(0, 0);
 }
 
 async function verifyEmail() {
@@ -4255,27 +4258,21 @@ async function verifyEmail() {
       showToast("Verifisert! Fortsetter til selga.no...", 2500);
       setTimeout(() => location.reload(), 500);
     } else {
-      // Verification succeeded but no auto-login: show dedicated login form
+      // Verification succeeded but no auto-login: return to email-login pane
       document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
       document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
       const loginPane = document.getElementById("pane-login");
       if (loginPane) loginPane.classList.add("active");
-      
-      // Pre-fill the username/phone field
+
+      // Pre-fill email field
       setTimeout(() => { 
-        const el = document.getElementById("loginUsername"); 
+        const el = document.getElementById("loginEmail"); 
         if (el) {
-          el.value = _pendingVerifyUsername;
+          el.value = _pendingVerifyEmail || "";
           el.focus();
         }
       }, 50);
-      
-      // Show success message
-      const errEl = document.getElementById("dedicatedLoginError");
-      if (errEl) { 
-        errEl.style.display = "none"; 
-      }
-      
+
       // Ensure auth panel is visible and scroll to top
       const authPanel = document.getElementById("authPanel");
       if (authPanel) authPanel.style.display = "";
@@ -5246,7 +5243,21 @@ function goHome() {
   updateAuthUI();
 }
 
+function pinAuthPanelPosition() {
+  const authPanel = document.getElementById("authPanel");
+  const welcome = document.getElementById("welcome");
+  if (!authPanel || !welcome) return;
+
+  // Keep auth panel anchored directly under welcome text to avoid layout jumps.
+  if (welcome.nextElementSibling !== authPanel) {
+    welcome.insertAdjacentElement("afterend", authPanel);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", pinAuthPanelPosition);
+
 window.onload=async ()=>{
+  pinAuthPanelPosition();
   await ensureWorkingApiBase();
   updateAuthUI();
 updateInboxSoundControls();
