@@ -2743,6 +2743,19 @@ width: 146px;
   </div>
 </div>
 
+<!-- Confirm delete account modal -->
+<div id="deleteConfirmModal" class="legal-modal-backdrop" style="display:none">
+  <div class="legal-modal" onclick="event.stopPropagation()" style="max-width:340px;text-align:center">
+    <h3 style="margin:0 0 12px;color:#c0392b">Slett konto</h3>
+    <p style="font-size:14px;line-height:1.55;color:#1a3557;margin-bottom:20px">Er du sikker? All data slettes permanent og kan ikke gjenopprettes.</p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button type="button" class="ghost" onclick="document.getElementById('deleteConfirmModal').style.display='none'">Avbryt</button>
+      <button type="button" id="confirmDeleteBtn" style="background:#c0392b;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:700;cursor:pointer" onclick="_doDeleteAccount()">Slett konto</button>
+    </div>
+    <div id="deleteConfirmMsg" style="display:none;margin-top:12px;font-size:13px"></div>
+  </div>
+</div>
+
 <div id="legalModal" class="legal-modal-backdrop" onclick="closeLegalModal(event)">
   <div class="legal-modal" onclick="event.stopPropagation()">
     <div class="assistant-top" style="margin-bottom:8px">
@@ -3798,11 +3811,21 @@ function logoutFromProfileModal() {
   logout();
 }
 
-async function deleteAccountFromProfileModal() {
-  const confirmed = window.confirm("Er du sikker på at du vil slette kontoen din? All data slettes permanent og kan ikke gjenopprettes.");
-  if (!confirmed) return;
+function deleteAccountFromProfileModal() {
+  const modal = document.getElementById("deleteConfirmModal");
+  const msg = document.getElementById("deleteConfirmMsg");
+  if (msg) { msg.style.display = "none"; msg.textContent = ""; }
+  const btn = document.getElementById("confirmDeleteBtn");
+  if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
+  if (modal) modal.style.display = "flex";
+}
+
+async function _doDeleteAccount() {
+  const btn = document.getElementById("confirmDeleteBtn");
+  const msg = document.getElementById("deleteConfirmMsg");
   const token = localStorage.getItem("token");
   if (!token) return;
+  if (btn) { btn.disabled = true; btn.textContent = "Sletter..."; }
   try {
     const resp = await fetchWithAutoApi("/users/me", {
       method: "DELETE",
@@ -3810,15 +3833,18 @@ async function deleteAccountFromProfileModal() {
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      showToast("Feil: " + (err.detail || "Kunne ikke slette konto"), 3000);
+      if (msg) { msg.style.display = "block"; msg.style.color = "#c0392b"; msg.textContent = err.detail || "Kunne ikke slette konto. Prøv igjen."; }
+      if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
       return;
     }
+    document.getElementById("deleteConfirmModal").style.display = "none";
     closeProfileModal();
     localStorage.removeItem("token");
     updateAuthUI();
     showToast("Kontoen din er slettet.", 3000);
   } catch (e) {
-    showToast("Nettverksfeil. Prøv igjen.", 3000);
+    if (msg) { msg.style.display = "block"; msg.style.color = "#c0392b"; msg.textContent = "Nettverksfeil. Sjekk internett og prøv igjen."; }
+    if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
   }
 }
 
