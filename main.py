@@ -263,6 +263,17 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 def _is_valid_email(email: str) -> bool:
     return bool(_EMAIL_RE.match(email))
 
+def _mask_email(email: str) -> str:
+    try:
+        local, domain = email.split("@", 1)
+    except ValueError:
+        return email
+    if len(local) <= 2:
+        masked_local = local[0] + "*" * max(len(local) - 1, 0)
+    else:
+        masked_local = local[:2] + "*" * (len(local) - 2)
+    return f"{masked_local}@{domain}"
+
 def _generate_otp() -> str:
     return str(random.randint(100000, 999999))
 
@@ -434,7 +445,12 @@ def register(
     db.commit()
 
     _send_verification_email(email_clean, otp)
-    return {"msg": "ok", "is_free": is_free, "requires_email_verification": True}
+    return {
+        "msg": "ok",
+        "is_free": is_free,
+        "requires_email_verification": True,
+        "sent_to": _mask_email(email_clean),
+    }
 
 
 @app.post("/verify-email")
@@ -490,7 +506,7 @@ def resend_verification(
     # Keep account verified status, but rotate one-time login/verification code.
     db.commit()
     _send_verification_email(user.email, otp)
-    return {"msg": "sent"}
+    return {"msg": "sent", "sent_to": _mask_email(user.email)}
 
 # === LOGIN ===
 @app.post("/login")
