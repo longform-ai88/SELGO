@@ -2498,23 +2498,20 @@ width: 146px;
 <div class="auth-tabs" style="display:none"></div>
 
 <div class="auth-pane active" id="pane-login">
-  <p class="auth-subtitle" style="margin:0 0 14px">Vi sender en påloggingskode til epostadressen din.</p>
   <div class="field">
-    <label for="loginEmail">Epostadresse</label>
-    <input id="loginEmail" type="email" placeholder="din@epost.no" autocomplete="email">
+    <label for="loginIdentifier">Mobilnummer eller e-post</label>
+    <input id="loginIdentifier" type="text" placeholder="98765432 eller din@epost.no" autocomplete="username">
   </div>
   <div class="field" style="margin-top:10px">
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-      <input id="rememberMe" type="checkbox">
-      <span>Husk meg</span>
-    </label>
+    <label for="loginPassword">Passord</label>
+    <input id="loginPassword" type="password" placeholder="Passord" autocomplete="current-password">
   </div>
   <div class="auth-actions">
-    <button type="button" id="emailContinueBtn" onclick="startEmailAuthFlow()">Fortsett</button>
+    <button type="button" id="loginBtn" onclick="doLogin()">Logg inn</button>
     <div class="auth-secondary-note">Ikke registrert enda?</div>
     <button type="button" class="ghost" onclick="openRegisterFromEmail()">Lag en konto</button>
   </div>
-  <div id="emailStartMsg" style="display:none;margin-top:12px;font-size:13px;color:#c0392b"></div>
+  <div id="loginMsg" style="display:none;margin-top:12px;font-size:13px;color:#c0392b"></div>
 </div>
 
 <div class="auth-pane" id="pane-register">
@@ -3668,8 +3665,8 @@ function openProfileModal(event) {
     const authPanel = document.getElementById("authPanel");
     if (authPanel) {
       authPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-      const emailInput = document.getElementById("loginEmail");
-      if (emailInput) emailInput.focus();
+      const identInput = document.getElementById("loginIdentifier");
+      if (identInput) identInput.focus();
     }
     return;
   }
@@ -4166,6 +4163,64 @@ function showVerifyEmailPane() {
   if (msgEl) { msgEl.style.display = "block"; msgEl.style.color = "rgba(240,220,160,0.7)"; msgEl.textContent = "Sjekk e-postadressen din for verifiseringskoden."; }
 }
 
+async function doLogin() {
+  const btn = document.getElementById("loginBtn");
+  const msgEl = document.getElementById("loginMsg");
+  const identifier = (document.getElementById("loginIdentifier")?.value || "").trim();
+  const password = (document.getElementById("loginPassword")?.value || "");
+
+  if (!identifier) {
+    if (msgEl) { msgEl.style.display = "block"; msgEl.textContent = "Skriv inn mobilnummer eller e-post."; }
+    return;
+  }
+  if (!password) {
+    if (msgEl) { msgEl.style.display = "block"; msgEl.textContent = "Skriv inn passord."; }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "Logger inn..."; }
+  if (msgEl) { msgEl.style.display = "none"; }
+
+  try {
+    const form = new FormData();
+    // Send as both phone and email so backend can match either
+    form.append("phone", identifier);
+    form.append("email", identifier);
+    form.append("password", password);
+
+    let res;
+    try {
+      res = await fetchWithAutoApi("/login", { method: "POST", body: form });
+    } catch (_) {
+      res = await fetch(window.location.origin + "/login", { method: "POST", body: form });
+    }
+
+    if (!res.ok) {
+      const err = await readErrorPayload(res);
+      if (msgEl) {
+        msgEl.style.display = "block";
+        msgEl.textContent = err.detail || "Feil mobilnummer/e-post eller passord.";
+      }
+      if (btn) { btn.disabled = false; btn.textContent = "Logg inn"; }
+      return;
+    }
+
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem("access_token", data.access_token);
+      if (data.is_free !== undefined) localStorage.setItem("is_free", data.is_free ? "1" : "0");
+      closeAuthModal();
+      await loadCurrentUser();
+    }
+  } catch (_) {
+    if (msgEl) {
+      msgEl.style.display = "block";
+      msgEl.textContent = "Nettverksfeil. Prøv igjen.";
+    }
+    if (btn) { btn.disabled = false; btn.textContent = "Logg inn"; }
+  }
+}
+
 async function startEmailAuthFlow() {
   const btn = document.getElementById("emailContinueBtn");
   const msgEl = document.getElementById("emailStartMsg");
@@ -4221,9 +4276,10 @@ async function startEmailAuthFlow() {
 }
 
 function openRegisterFromEmail() {
-  const email = (document.getElementById("loginEmail")?.value || "").trim().toLowerCase();
+  const ident = (document.getElementById("loginIdentifier")?.value || "").trim().toLowerCase();
   const regEmail = document.getElementById("registerEmail");
-  if (email && regEmail) regEmail.value = email;
+  // Pre-fill email field only if the identifier looks like an email
+  if (ident && ident.includes("@") && regEmail) regEmail.value = ident;
   document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
   const pane = document.getElementById("pane-register");
   if (pane) pane.classList.add("active");
@@ -4275,9 +4331,9 @@ async function verifyEmail() {
       const loginPane = document.getElementById("pane-login");
       if (loginPane) loginPane.classList.add("active");
 
-      // Pre-fill email field
+      // Pre-fill identifier field
       setTimeout(() => { 
-        const el = document.getElementById("loginEmail"); 
+        const el = document.getElementById("loginIdentifier"); 
         if (el) {
           el.value = _pendingVerifyEmail || "";
           el.focus();
@@ -4330,13 +4386,6 @@ async function resendVerificationCode() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const remembered = localStorage.getItem("rememberLoginEmail") || "";
-  const emailInput = document.getElementById("loginEmail");
-  const remember = document.getElementById("rememberMe");
-  if (remembered && emailInput) {
-    emailInput.value = remembered;
-    if (remember) remember.checked = true;
-  }
 });
 
 async function loginWithVipps() {

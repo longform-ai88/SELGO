@@ -523,16 +523,17 @@ def resend_verification(
 def login(
     username: Optional[str] = Form(None),
     phone: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
     password: str = Form(...),
     invite_code: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    identifier = (username or phone or "").strip()
+    identifier = (username or phone or email or "").strip()
     if not identifier:
-        raise HTTPException(400, "Brukernavn eller mobilnummer er påkrevd")
+        raise HTTPException(400, "Mobilnummer eller e-post er påkrevd")
 
     user = db.query(UserDB).filter(
-        (UserDB.username == identifier) | (UserDB.phone == identifier)
+        (UserDB.phone == identifier) | (UserDB.email == identifier)
     ).first()
 
     if not user:
