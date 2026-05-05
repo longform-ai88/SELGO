@@ -2546,7 +2546,7 @@ width: 146px;
 </div>
 
 <!-- E-post verifikasjon-pane (vist etter registrering) -->
-<div class="auth-pane" id="pane-verify-email" style="display:none">
+<div class="auth-pane" id="pane-verify-email">
   <div class="auth-card-header" style="margin-bottom:16px">
     <p style="font-size:0.95rem;color:rgba(240,220,160,0.8);margin:0">Vi har sendt en 6-sifret kode til e-postadressen din. Skriv den inn nedenfor for å aktivere kontoen.</p>
   </div>
@@ -4158,10 +4158,10 @@ function switchAuthTab(mode) {
 
 function showVerifyEmailPane() {
   // Hide all panes, show the verify pane
-  document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".auth-pane").forEach(p => { p.classList.remove("active"); p.style.display = ""; });
   document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
   const vp = document.getElementById("pane-verify-email");
-  if (vp) vp.classList.add("active");
+  if (vp) { vp.classList.add("active"); vp.style.display = "block"; }
   const msgEl = document.getElementById("verifyEmailMsg");
   if (msgEl) { msgEl.style.display = "block"; msgEl.style.color = "rgba(240,220,160,0.7)"; msgEl.textContent = "Sjekk e-postadressen din for verifiseringskoden."; }
 }
