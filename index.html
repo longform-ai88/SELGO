@@ -2496,117 +2496,8 @@ width: 146px;
   <p class="auth-subtitle">Fortsett til selga.no</p>
 </div>
 
-<div class="auth-tabs" style="display:none">
-  <button class="auth-tab active" onclick="switchAuthTab('username',this)">Brukernavn</button>
-  <button class="auth-tab" onclick="switchAuthTab('mobile',this)">Mobilnummer</button>
-  <button class="auth-tab" onclick="switchAuthTab('vipps',this)">Vipps</button>
-</div>
+<div class="auth-tabs" style="display:none"></div>
 
-<!-- Brukernavn-pane -->
-<div class="auth-pane" id="pane-username">
-  <div class="field">
-    <label for="fullName">Fullt navn</label>
-    <input id="fullName" placeholder="Navnet som vises for kjøpere" autocomplete="name">
-  </div>
-  <div class="field">
-    <label for="username">Brukernavn</label>
-    <input id="username" placeholder="Skriv inn brukernavn" autocomplete="username">
-  </div>
-  <div class="field">
-    <label for="regEmail">E-postadresse <span style="color:#e57373">*</span></label>
-    <input id="regEmail" type="email" placeholder="din@epost.no" autocomplete="email">
-  </div>
-  <div class="field">
-    <label for="regPhone">Mobilnummer <span style="color:#e57373">*</span></label>
-    <input id="regPhone" type="tel" placeholder="For eksempel 98765432" autocomplete="tel">
-  </div>
-  <div class="field">
-    <label for="password">Passord</label>
-    <input id="password" type="password" placeholder="Skriv inn passord" autocomplete="current-password">
-  </div>
-  <div class="field">
-    <label for="sellerType">Selgertype</label>
-    <select id="sellerType">
-      <option value="privat">Privat</option>
-      <option value="naering">Næring</option>
-    </select>
-  </div>
-  <div class="field">
-    <label for="companyName">Firmanavn</label>
-    <input id="companyName" placeholder="Kun for næring" autocomplete="organization">
-  </div>
-  <div class="field">
-    <label for="inviteCode">Invitasjonskode</label>
-    <input id="inviteCode" placeholder="Valgfritt" autocomplete="off">
-  </div>
-  <div class="auth-actions">
-    <button id="loginBtn" onclick="login('username')">Logg inn</button>
-    <div class="auth-secondary-note">Ny hos SELGA?</div>
-    <button onclick="register('username')" id="registerBtn" class="ghost">Registrer ny bruker</button>
-    <div class="auth-vipps-divider">Eller bruk Vipps</div>
-    <button type="button" class="vipps-secondary" onclick="continueWithVipps()">Fortsett med Vipps</button>
-  </div>
-  <div id="loginError" class="auth-login-error"></div>
-</div>
-
-<!-- Mobilnummer-pane -->
-<div class="auth-pane" id="pane-mobile">
-  <div class="field">
-    <label for="mobileFullName">Fullt navn</label>
-    <input id="mobileFullName" placeholder="Navnet som vises for kjøpere" autocomplete="name">
-  </div>
-  <div class="field">
-    <label for="phoneInput">Mobilnummer <span style="color:#e57373">*</span></label>
-    <input id="phoneInput" type="tel" placeholder="For eksempel 98765432" maxlength="20" autocomplete="tel">
-  </div>
-  <div class="field">
-    <label for="mobileRegEmail">E-postadresse <span style="color:#e57373">*</span></label>
-    <input id="mobileRegEmail" type="email" placeholder="din@epost.no" autocomplete="email">
-  </div>
-  <div class="field">
-    <label for="phonePassword">Passord</label>
-    <input id="phonePassword" type="password" placeholder="Velg passord" autocomplete="new-password">
-  </div>
-  <div class="field">
-    <label for="mobileInviteCode">Invitasjonskode</label>
-    <input id="mobileInviteCode" placeholder="Valgfritt" autocomplete="off">
-  </div>
-  <div class="auth-actions">
-    <button type="button" id="mobileLoginBtn" onclick="login('mobile')">Logg inn med mobil</button>
-    <div class="auth-secondary-note">Ny hos SELGA?</div>
-    <button type="button" id="mobileRegisterBtn" onclick="register('mobile')" class="ghost">Registrer med mobilnummer</button>
-  </div>
-</div>
-
-<!-- E-post verifikasjon-pane (vist etter registrering) -->
-<div class="auth-pane" id="pane-verify-email" style="display:none">
-  <div class="auth-card-header" style="margin-bottom:16px">
-    <p style="font-size:0.95rem;color:rgba(240,220,160,0.8);margin:0">Vi har sendt en 6-sifret kode til e-postadressen din. Skriv den inn nedenfor for å aktivere kontoen.</p>
-  </div>
-  <div class="field">
-    <label for="otpInput">Bekreftelseskode</label>
-    <input id="otpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456" autocomplete="one-time-code" style="letter-spacing:6px;font-size:1.3rem;text-align:center">
-  </div>
-  <div class="auth-actions">
-    <button type="button" id="verifyEmailBtn" onclick="verifyEmail()">Bekreft e-post</button>
-    <button type="button" class="ghost" onclick="resendVerificationCode()">Send kode på nytt</button>
-  </div>
-  <div id="verifyEmailMsg" style="display:none;margin-top:8px;font-size:13px"></div>
-</div>
-
-<!-- Vipps-pane -->
-<div class="auth-pane" id="pane-vipps">
-  <p class="auth-subtitle" style="margin:0 0 18px">Logg inn eller registrer deg raskt og trygt med Vipps, uten ekstra steg.</p>
-  <div class="auth-actions">
-    <button class="vipps-btn" onclick="loginWithVipps()">
-      <span class="vipps-logo">Vipps</span>
-      <span>Logg inn med Vipps</span>
-    </button>
-  </div>
-  <p id="vippsStatus" style="font-size:12px;color:#e05000;margin-top:12px;display:none"></p>
-</div>
-
-<!-- Dedicated Login Pane (shown after email verification) -->
 <div class="auth-pane active" id="pane-login">
   <p class="auth-subtitle" style="margin:0 0 14px">Vi sender en påloggingskode til epostadressen din.</p>
   <div class="field">
@@ -2626,6 +2517,52 @@ width: 146px;
   </div>
   <div id="emailStartMsg" style="display:none;margin-top:12px;font-size:13px;color:#c0392b"></div>
 </div>
+
+<div class="auth-pane" id="pane-register">
+  <div class="field">
+    <label for="registerFirstName">Fornavn</label>
+    <input id="registerFirstName" placeholder="Fornavn" autocomplete="given-name">
+  </div>
+  <div class="field">
+    <label for="registerLastName">Etternavn</label>
+    <input id="registerLastName" placeholder="Etternavn" autocomplete="family-name">
+  </div>
+  <div class="field">
+    <label for="registerEmail">Epostadresse</label>
+    <input id="registerEmail" type="email" placeholder="din@epost.no" autocomplete="email">
+  </div>
+  <div class="field">
+    <label for="registerPhone">Mobilnummer</label>
+    <input id="registerPhone" type="tel" placeholder="For eksempel 98765432" autocomplete="tel">
+  </div>
+  <div class="field">
+    <label for="registerPassword">Passord</label>
+    <input id="registerPassword" type="password" placeholder="Velg passord" autocomplete="new-password">
+  </div>
+  <div class="auth-actions">
+    <button type="button" id="registerPrimaryBtn" onclick="register()">Registrer</button>
+    <button type="button" class="ghost" onclick="switchAuthTab('login')">Tilbake til innlogging</button>
+  </div>
+  <div id="loginError" class="auth-login-error"></div>
+</div>
+
+<!-- E-post verifikasjon-pane (vist etter registrering) -->
+<div class="auth-pane" id="pane-verify-email" style="display:none">
+  <div class="auth-card-header" style="margin-bottom:16px">
+    <p style="font-size:0.95rem;color:rgba(240,220,160,0.8);margin:0">Vi har sendt en 6-sifret kode til e-postadressen din. Skriv den inn nedenfor for å aktivere kontoen.</p>
+  </div>
+  <div class="field">
+    <label for="otpInput">Bekreftelseskode</label>
+    <input id="otpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456" autocomplete="one-time-code" style="letter-spacing:6px;font-size:1.3rem;text-align:center">
+  </div>
+  <div class="auth-actions">
+    <button type="button" id="verifyEmailBtn" onclick="verifyEmail()">Bekreft e-post</button>
+    <button type="button" class="ghost" onclick="resendVerificationCode()">Send kode på nytt</button>
+  </div>
+  <div id="verifyEmailMsg" style="display:none;margin-top:8px;font-size:13px"></div>
+</div>
+
+<p id="vippsStatus" style="font-size:12px;color:#e05000;margin-top:12px;display:none"></p>
 
 </div>
 
@@ -3585,8 +3522,9 @@ async function createListingWithProvider(providerOverride = null){
 function switchAuthTab(name, el) {
   document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
-  el.classList.add("active");
-  document.getElementById("pane-" + name).classList.add("active");
+  if (el) el.classList.add("active");
+  const pane = document.getElementById("pane-" + name);
+  if (pane) pane.classList.add("active");
 }
 
 async function fetchItems(){
@@ -4137,50 +4075,32 @@ async function loginDedicated() {
 let _pendingVerifyUsername = "";
 let _pendingVerifyEmail = "";
 
-async function register(mode){
-  const registerBtn = document.getElementById(mode === "mobile" ? "mobileRegisterBtn" : "registerBtn");
+async function register(){
+  const registerBtn = document.getElementById("registerPrimaryBtn");
   const origText = registerBtn ? registerBtn.textContent : "";
   if (registerBtn) { registerBtn.disabled = true; registerBtn.textContent = "Laster..."; }
   try {
   const form = new FormData();
-  const sellerType = (document.getElementById("sellerType")?.value || "privat").toLowerCase();
-  const companyName = document.getElementById("companyName")?.value || "";
+  const firstName = (document.getElementById("registerFirstName")?.value || "").trim();
+  const lastName = (document.getElementById("registerLastName")?.value || "").trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  const em = (document.getElementById("registerEmail")?.value || "").trim().toLowerCase();
+  const ph = (document.getElementById("registerPhone")?.value || "").trim().replace(/\s/g,"");
+  const pw = (document.getElementById("registerPassword")?.value || "");
 
-  if (mode === "mobile") {
-    const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
-    const em = (document.getElementById("mobileRegEmail")?.value || "").trim();
-    const pw = document.getElementById("phonePassword").value;
-    const fn = document.getElementById("mobileFullName")?.value.trim() || "";
-    if (!ph || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
-    if (!em) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("E-postadresse er påkrevd", true); return; }
-    form.append("phone", ph);
-    form.append("email", em);
-    form.append("password", pw);
-    if (fn) form.append("full_name", fn);
-    _pendingVerifyUsername = ph;
-    _pendingVerifyEmail = em;
-  } else {
-    const u = document.getElementById("username").value.trim();
-    const em = (document.getElementById("regEmail")?.value || "").trim();
-    const ph = (document.getElementById("regPhone")?.value || "").trim().replace(/\s/g,"");
-    const pw = document.getElementById("password").value;
-    const fn = document.getElementById("fullName")?.value.trim() || "";
-    if (!u || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
-    if (!em) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("E-postadresse er påkrevd", true); return; }
-    if (!ph) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Mobilnummer er påkrevd", true); return; }
-    form.append("username", u);
-    form.append("email", em);
-    form.append("phone", ph);
-    form.append("password", pw);
-    if (fn) form.append("full_name", fn);
-    _pendingVerifyUsername = u;
-    _pendingVerifyEmail = em;
+  if (!firstName || !lastName || !em || !ph || !pw) {
+    if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
+    showAuthMsg("Fyll inn fornavn, etternavn, epostadresse, mobilnummer og passord", true);
+    return;
   }
 
-  form.append("seller_type", sellerType);
-  form.append("company_name", companyName);
-  const inviteCode = (document.getElementById(mode === "mobile" ? "mobileInviteCode" : "inviteCode")?.value || "").trim();
-  if (inviteCode) form.append("invite_code", inviteCode);
+  form.append("email", em);
+  form.append("phone", ph);
+  form.append("password", pw);
+  if (fullName) form.append("full_name", fullName);
+
+  _pendingVerifyUsername = ph;
+  _pendingVerifyEmail = em;
 
   let res;
   try {
@@ -4219,27 +4139,10 @@ async function register(mode){
 }
 
 function switchAuthTab(mode) {
-  // Hide all panes
   document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
-  document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
-  
-  // Show target pane and tab
-  const paneId = mode === "mobile" ? "pane-mobile" : mode === "vipps" ? "pane-vipps" : "pane-username";
+  const paneId = mode === "register" ? "pane-register" : "pane-login";
   const pane = document.getElementById(paneId);
   if (pane) pane.classList.add("active");
-  
-  // Find and activate corresponding tab button
-  const tabs = Array.from(document.querySelectorAll(".auth-tab"));
-  for (const tab of tabs) {
-    const text = tab.textContent.toLowerCase();
-    const isMatch = (mode === "mobile" && text.includes("mobilnummer")) ||
-                    (mode === "vipps" && text.includes("vipps")) ||
-                    (mode === "username" && text.includes("brukernavn"));
-    if (isMatch) {
-      tab.classList.add("active");
-      break;
-    }
-  }
 }
 
 function showVerifyEmailPane() {
@@ -4308,13 +4211,9 @@ async function startEmailAuthFlow() {
 
 function openRegisterFromEmail() {
   const email = (document.getElementById("loginEmail")?.value || "").trim().toLowerCase();
-  const regEmail = document.getElementById("regEmail");
-  const mobileRegEmail = document.getElementById("mobileRegEmail");
-  if (email) {
-    if (regEmail) regEmail.value = email;
-    if (mobileRegEmail) mobileRegEmail.value = email;
-  }
-  switchAuthTab("username");
+  const regEmail = document.getElementById("registerEmail");
+  if (email && regEmail) regEmail.value = email;
+  switchAuthTab("register");
 }
 
 async function verifyEmail() {
