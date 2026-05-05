@@ -422,8 +422,6 @@ def verify_email(
         user = db.query(UserDB).filter(UserDB.email == email_clean).first()
     if not user:
         raise HTTPException(404, "Bruker ikke funnet")
-    if user.email_verified:
-        return {"msg": "already_verified"}
     if not user.email_token or (user.email_token or "").strip() != code.strip():
         raise HTTPException(400, "Feil kode")
     user.email_verified = True
@@ -451,12 +449,11 @@ def resend_verification(
         user = db.query(UserDB).filter(UserDB.email == email_clean).first()
     if not user:
         raise HTTPException(404, "Bruker ikke funnet")
-    if user.email_verified:
-        return {"msg": "already_verified"}
     if not user.email:
         raise HTTPException(400, "Ingen e-post registrert")
     otp = _generate_otp()
     user.email_token = otp
+    # Keep account verified status, but rotate one-time login/verification code.
     db.commit()
     _send_verification_email(user.email, otp)
     return {"msg": "sent"}
