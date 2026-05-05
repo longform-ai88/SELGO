@@ -399,10 +399,10 @@ def register(
         full_name=full_name.strip() if full_name else None,
         phone=phone_clean,
         email=email_clean,
-        email_verified=False,
+        email_verified=0,
         email_token=otp,
-        is_verified=False,
-        is_free=is_free,
+        is_verified=0,
+        is_free=int(is_free),
     )
     db.add(user)
     db.commit()
@@ -432,9 +432,9 @@ def verify_email(
         raise HTTPException(404, "Bruker ikke funnet")
     if not user.email_token or (user.email_token or "").strip() != code.strip():
         raise HTTPException(400, "Feil kode")
-    user.email_verified = True
+    user.email_verified = 1
     user.email_token = None
-    user.is_verified = True
+    user.is_verified = 1
     db.commit()
     return {"msg": "verified", "access_token": create_token(user.username), "is_free": bool(user.is_free)}
 
