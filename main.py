@@ -937,19 +937,28 @@ def delete_own_account(token: str = Depends(oauth), db: Session = Depends(get_db
     if not user:
         raise HTTPException(401, "Ikke innlogget")
 
-    # Anonymise listings instead of hard-deleting (preserve listing history)
-    db.query(ItemDB).filter(ItemDB.owner == user.username).update(
-        {"status": "deleted", "seller_phone": None}, synchronize_session=False
-    )
+    # Find item IDs owned by this user via the owners table
+    owned = db.query(ListingOwnerDB).filter(ListingOwnerDB.username == user.username).all()
+    owned_ids = [o.item_id for o in owned]
+
+    # Soft-delete listings
+    if owned_ids:
+        db.query(ItemDB).filter(ItemDB.id.in_(owned_ids)).update(
+            {"status": "deleted", "seller_phone": None}, synchronize_session=False
+        )
+
     # Remove listing ownership records
     db.query(ListingOwnerDB).filter(ListingOwnerDB.username == user.username).delete(synchronize_session=False)
+
     # Remove messages
     db.query(ContactMessageDB).filter(
         (ContactMessageDB.buyer_username == user.username) |
         (ContactMessageDB.seller_username == user.username)
     ).delete(synchronize_session=False)
+
     # Remove payment orders
     db.query(PaymentOrderDB).filter(PaymentOrderDB.buyer_username == user.username).delete(synchronize_session=False)
+
     # Delete the user
     db.delete(user)
     db.commit()

@@ -3830,13 +3830,14 @@ async function _doDeleteAccount() {
   if (!token) return;
   if (btn) { btn.disabled = true; btn.textContent = "Sletter..."; }
   try {
-    const resp = await fetchWithAutoApi("/users/me", {
+    const resp = await fetch(API + "/users/me", {
       method: "DELETE",
       headers: { "Authorization": "Bearer " + token }
     });
     if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      if (msg) { msg.style.display = "block"; msg.style.color = "#c0392b"; msg.textContent = err.detail || "Kunne ikke slette konto. Prøv igjen."; }
+      let detail = "";
+      try { const err = await resp.json(); detail = err.detail || ""; } catch(_) {}
+      if (msg) { msg.style.display = "block"; msg.style.color = "#c0392b"; msg.textContent = detail || `Feil ${resp.status}. Prøv igjen.`; }
       if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
       return;
     }
@@ -3846,6 +3847,22 @@ async function _doDeleteAccount() {
     updateAuthUI();
     showToast("Kontoen din er slettet.", 3000);
   } catch (e) {
+    // Retry once with the raw origin in case API base is stale
+    try {
+      const fallback = window.location.origin;
+      const resp2 = await fetch(fallback + "/users/me", {
+        method: "DELETE",
+        headers: { "Authorization": "Bearer " + token }
+      });
+      if (resp2.ok) {
+        document.getElementById("deleteConfirmModal").style.display = "none";
+        closeProfileModal();
+        localStorage.removeItem("token");
+        updateAuthUI();
+        showToast("Kontoen din er slettet.", 3000);
+        return;
+      }
+    } catch(_) {}
     if (msg) { msg.style.display = "block"; msg.style.color = "#c0392b"; msg.textContent = "Nettverksfeil. Sjekk internett og prøv igjen."; }
     if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
   }
