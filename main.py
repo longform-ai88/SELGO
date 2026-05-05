@@ -299,11 +299,19 @@ def get_user(token: str = Depends(oauth), db: Session = Depends(get_db)):
 # === ROOT ===
 @app.get("/")
 def root():
-    return FileResponse("index.html")
+    resp = FileResponse("index.html")
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 @app.get("/app")
 def serve_app():
-    return FileResponse("index.html")
+    resp = FileResponse("index.html")
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 # === ADMIN: set user as free ===
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "") or os.getenv("ADMIN_PASSWORD", "") or os.getenv("ADMIN-PASSWORD", "")
