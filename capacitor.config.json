@@ -1,0 +1,9 @@
+{
+  "appId": "no.selga.app",
+  "appName": "SELGA",
+  "webDir": "public",
+  "server": {
+    "url": "https://www.selga.no",
+    "cleartext": true
+  }
+}

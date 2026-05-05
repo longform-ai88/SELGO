@@ -24,6 +24,11 @@ import json
 import secrets
 import base64
 import time
+import smtplib
+import random
+import re
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = FastAPI()
 app.add_middleware(
@@ -76,6 +81,10 @@ with engine.connect() as _conn:
     _add_column_if_missing(_conn, "contact_messages", "status", "VARCHAR DEFAULT 'sent'")
     _add_column_if_missing(_conn, "contact_messages", "created_at", "TIMESTAMP")
 
+    _add_column_if_missing(_conn, "users", "email", "VARCHAR")
+    _add_column_if_missing(_conn, "users", "email_verified", "INTEGER DEFAULT 0")
+    _add_column_if_missing(_conn, "users", "email_token", "VARCHAR")
+
     _conn.commit()
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
@@ -123,6 +132,13 @@ VIPPS_SYSTEM_PLUGIN_VERSION = os.getenv("VIPPS_SYSTEM_PLUGIN_VERSION", "1.0.0")
 
 VIPPS_LOGIN_STATES: Dict[str, Dict[str, Any]] = {}
 VIPPS_STATE_TTL_SECONDS = 600
+
+# === EMAIL CONFIG ===
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@selga.no")
 
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth = OAuth2PasswordBearer(tokenUrl="login")
@@ -225,6 +241,42 @@ def _vipps_get_userinfo(userinfo_endpoint: str, access_token: str) -> Dict[str, 
         headers={"Authorization": f"Bearer {access_token}"},
     )
 
+# === EMAIL ===
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+def _is_valid_email(email: str) -> bool:
+    return bool(_EMAIL_RE.match(email))
+
+def _generate_otp() -> str:
+    return str(random.randint(100000, 999999))
+
+def _send_verification_email(to_email: str, otp: str) -> None:
+    """Send OTP verification email. Falls back to console log if SMTP not configured."""
+    if not SMTP_HOST or not SMTP_USER:
+        print(f"[EMAIL-OTP] To: {to_email}  Code: {otp}")
+        return
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "SELGA – Bekreft e-postadressen din"
+    msg["From"] = FROM_EMAIL
+    msg["To"] = to_email
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#1c1408;color:#f0dfa8;padding:32px;border-radius:12px">
+      <h2 style="color:#f6cf74;margin-bottom:8px">Velkommen til SELGA</h2>
+      <p>Din bekreftelseskode er:</p>
+      <div style="font-size:40px;font-weight:900;letter-spacing:8px;color:#f6cf74;margin:18px 0">{otp}</div>
+      <p style="font-size:13px;color:rgba(240,220,160,0.6)">Koden er gyldig i 30 minutter. Deles ikke med andre.</p>
+    </div>
+    """
+    msg.attach(MIMEText(html, "html"))
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as s:
+            s.starttls()
+            s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+    except Exception as exc:
+        print(f"[EMAIL-OTP] SMTP error: {exc}")
+        # Don't raise — OTP is saved in DB, admin can look it up
+
 # === DB ===
 def get_db():
     db = SessionLocal()
@@ -295,30 +347,96 @@ def activate_free_account(
 
 # === REGISTER ===
 @app.post("/register")
-def register(username: str = Form(None), password: str = Form(...), phone: str = Form(None), full_name: str = Form(None), invite_code: str = Form(None), db: Session = Depends(get_db)):
-    if not username and not phone:
+def register(
+    username: str = Form(None),
+    password: str = Form(...),
+    phone: str = Form(None),
+    email: str = Form(None),
+    full_name: str = Form(None),
+    invite_code: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    # Require phone
+    phone_clean = (phone or "").strip().replace(" ", "")
+    if not phone_clean:
+        raise HTTPException(400, "Mobilnummer er påkrevd")
+
+    # Require email
+    email_clean = (email or "").strip().lower()
+    if not email_clean:
+        raise HTTPException(400, "E-postadresse er påkrevd")
+    if not _is_valid_email(email_clean):
+        raise HTTPException(400, "Ugyldig e-postadresse")
+
+    # Require username or fall back to phone
+    if not username and not phone_clean:
         raise HTTPException(400, "Brukernavn eller mobilnummer er påkrevd")
 
-    effective_username = username if username else phone
+    effective_username = (username or "").strip() or phone_clean
 
-    existing = db.query(UserDB).filter(UserDB.username == effective_username).first()
-    if existing:
+    # Check for existing username
+    if db.query(UserDB).filter(UserDB.username == effective_username).first():
         raise HTTPException(400, "Bruker finnes allerede")
+
+    # Check for existing email
+    if db.query(UserDB).filter(UserDB.email == email_clean).first():
+        raise HTTPException(400, "E-postadressen er allerede registrert")
 
     is_free = bool(INVITE_CODE and invite_code and invite_code.strip() == INVITE_CODE)
 
+    otp = _generate_otp()
     user = UserDB(
         username=effective_username,
         password=pwd.hash(password),
         full_name=full_name.strip() if full_name else None,
-        phone=phone,
-        is_verified=bool(phone),
-        is_free=is_free
+        phone=phone_clean,
+        email=email_clean,
+        email_verified=False,
+        email_token=otp,
+        is_verified=False,
+        is_free=is_free,
     )
-
     db.add(user)
     db.commit()
-    return {"msg": "ok", "is_free": is_free}
+
+    _send_verification_email(email_clean, otp)
+    return {"msg": "ok", "is_free": is_free, "requires_email_verification": True}
+
+
+@app.post("/verify-email")
+def verify_email(
+    username: str = Form(...),
+    code: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = db.query(UserDB).filter(UserDB.username == username).first()
+    if not user:
+        raise HTTPException(404, "Bruker ikke funnet")
+    if user.email_verified:
+        return {"msg": "already_verified"}
+    if not user.email_token or (user.email_token or "").strip() != code.strip():
+        raise HTTPException(400, "Feil kode")
+    user.email_verified = True
+    user.email_token = None
+    user.is_verified = True
+    db.commit()
+    return {"msg": "verified", "access_token": create_token(user.username), "is_free": bool(user.is_free)}
+
+
+@app.post("/resend-verification")
+def resend_verification(username: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(UserDB).filter(UserDB.username == username).first()
+    if not user:
+        raise HTTPException(404, "Bruker ikke funnet")
+    if user.email_verified:
+        return {"msg": "already_verified"}
+    if not user.email:
+        raise HTTPException(400, "Ingen e-post registrert")
+    otp = _generate_otp()
+    user.email_token = otp
+    db.commit()
+    _send_verification_email(user.email, otp)
+    return {"msg": "sent"}
 
 # === LOGIN ===
 @app.post("/login")
@@ -810,6 +928,39 @@ async def create_checkout_session(
         db.commit()
 
     return {"checkout_url": session.url}
+
+# === DELETE OWN ACCOUNT ===
+@app.delete("/users/me")
+def delete_own_account(token: str = Depends(oauth), db: Session = Depends(get_db)):
+    data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    user = db.query(UserDB).filter(UserDB.username == data["sub"]).first()
+    if not user:
+        raise HTTPException(401, "Ikke innlogget")
+
+    # Anonymise listings instead of hard-deleting (preserve listing history)
+    db.query(ItemDB).filter(ItemDB.owner == user.username).update(
+        {"status": "deleted", "seller_phone": None}, synchronize_session=False
+    )
+    # Remove listing ownership records
+    db.query(ListingOwnerDB).filter(ListingOwnerDB.username == user.username).delete(synchronize_session=False)
+    # Remove messages
+    db.query(ContactMessageDB).filter(
+        (ContactMessageDB.buyer_username == user.username) |
+        (ContactMessageDB.seller_username == user.username)
+    ).delete(synchronize_session=False)
+    # Remove payment orders
+    db.query(PaymentOrderDB).filter(PaymentOrderDB.buyer_username == user.username).delete(synchronize_session=False)
+    # Delete the user
+    db.delete(user)
+    db.commit()
+    return {"msg": "Konto slettet"}
+
+
+# === SUPPORT PAGE ===
+@app.get("/support")
+def support_page():
+    return FileResponse("support.html")
+
 
 # === TEST ===
 @app.get("/ping")

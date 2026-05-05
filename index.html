@@ -2397,7 +2397,7 @@ width: 146px;
 
 <div class="top-fixed-bar">
   <div style="display:flex;align-items:center;gap:8px">
-  <button type="button" class="header-icon-btn" aria-label="Hjem" onclick="window.location.href='/'">
+  <button type="button" class="header-icon-btn" aria-label="Hjem" onclick="goHome()">
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M3 11.5L12 4l9 7.5"></path>
       <path d="M6.5 10.5V20h11v-9.5"></path>
@@ -2513,6 +2513,14 @@ width: 146px;
     <input id="username" placeholder="Skriv inn brukernavn" autocomplete="username">
   </div>
   <div class="field">
+    <label for="regEmail">E-postadresse <span style="color:#e57373">*</span></label>
+    <input id="regEmail" type="email" placeholder="din@epost.no" autocomplete="email">
+  </div>
+  <div class="field">
+    <label for="regPhone">Mobilnummer <span style="color:#e57373">*</span></label>
+    <input id="regPhone" type="tel" placeholder="For eksempel 98765432" autocomplete="tel">
+  </div>
+  <div class="field">
     <label for="password">Passord</label>
     <input id="password" type="password" placeholder="Skriv inn passord" autocomplete="current-password">
   </div>
@@ -2548,8 +2556,12 @@ width: 146px;
     <input id="mobileFullName" placeholder="Navnet som vises for kjøpere" autocomplete="name">
   </div>
   <div class="field">
-    <label for="phoneInput">Mobilnummer</label>
+    <label for="phoneInput">Mobilnummer <span style="color:#e57373">*</span></label>
     <input id="phoneInput" type="tel" placeholder="For eksempel 98765432" maxlength="20" autocomplete="tel">
+  </div>
+  <div class="field">
+    <label for="mobileRegEmail">E-postadresse <span style="color:#e57373">*</span></label>
+    <input id="mobileRegEmail" type="email" placeholder="din@epost.no" autocomplete="email">
   </div>
   <div class="field">
     <label for="phonePassword">Passord</label>
@@ -2564,6 +2576,22 @@ width: 146px;
     <div class="auth-secondary-note">Ny hos SELGA?</div>
     <button type="button" id="mobileRegisterBtn" onclick="register('mobile')" class="ghost">Registrer med mobilnummer</button>
   </div>
+</div>
+
+<!-- E-post verifikasjon-pane (vist etter registrering) -->
+<div class="auth-pane" id="pane-verify-email" style="display:none">
+  <div class="auth-card-header" style="margin-bottom:16px">
+    <p style="font-size:0.95rem;color:rgba(240,220,160,0.8);margin:0">Vi har sendt en 6-sifret kode til e-postadressen din. Skriv den inn nedenfor for å aktivere kontoen.</p>
+  </div>
+  <div class="field">
+    <label for="otpInput">Bekreftelseskode</label>
+    <input id="otpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="123456" autocomplete="one-time-code" style="letter-spacing:6px;font-size:1.3rem;text-align:center">
+  </div>
+  <div class="auth-actions">
+    <button type="button" id="verifyEmailBtn" onclick="verifyEmail()">Bekreft e-post</button>
+    <button type="button" class="ghost" onclick="resendVerificationCode()">Send kode på nytt</button>
+  </div>
+  <div id="verifyEmailMsg" style="display:none;margin-top:8px;font-size:13px"></div>
 </div>
 
 <!-- Vipps-pane -->
@@ -3004,9 +3032,9 @@ const legalDocs = {
   },
   gdpr: {
     title: "Rutiner for sletting av brukerdata (GDPR)",
-    html: `<p>Du kan be om sletting av konto og personopplysninger ved å kontakte support. Vi bekrefter forespørselen og identiteten før sletting.</p>
+    html: `<p>Du kan slette kontoen din direkte i appen: åpne profil-menyen (personikon øverst til høyre) og velg <strong>«Slett konto»</strong>. All data slettes umiddelbart.</p>
 <p>Data som ikke er lovpålagt å lagre slettes eller anonymiseres innen 30 dager. Transaksjonsdata kan oppbevares lenger hvis regnskapslov krever det.</p>
-<p>Når sletting er gjennomført, får du en bekreftelse på hva som er slettet og hva som eventuelt må beholdes.</p>`
+<p>Når sletting er gjennomført, får du en bekreftelse på hva som er slettet og hva som eventuelt må beholdes. Ta kontakt på <a href="mailto:support@selga.no" style="color:#f6cf74">support@selga.no</a> ved spørsmål.</p>`
   }
 };
 
@@ -3684,6 +3712,8 @@ function renderProfileModalBody() {
     body.innerHTML = `
       <p class="profile-info">Du er innlogget som <strong>${username}</strong>.</p>
       <button type="button" class="vipps-secondary" onclick="logoutFromProfileModal()">Logg ut</button>
+      <hr style="margin:14px 0;border-color:rgba(255,255,255,0.1)">
+      <button type="button" class="ghost" style="color:#e57373;border-color:#e57373;font-size:13px" onclick="deleteAccountFromProfileModal()">Slett konto</button>
     `;
     return;
   }
@@ -3766,6 +3796,30 @@ async function registerFromProfileModal() {
 
 function logoutFromProfileModal() {
   logout();
+}
+
+async function deleteAccountFromProfileModal() {
+  const confirmed = window.confirm("Er du sikker på at du vil slette kontoen din? All data slettes permanent og kan ikke gjenopprettes.");
+  if (!confirmed) return;
+  const token = localStorage.getItem("token");
+  if (!token) return;
+  try {
+    const resp = await fetch(getApiBase() + "/users/me", {
+      method: "DELETE",
+      headers: { "Authorization": "Bearer " + token }
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      showToast("Feil: " + (err.detail || "Kunne ikke slette konto"), 3000);
+      return;
+    }
+    closeProfileModal();
+    localStorage.removeItem("token");
+    updateAuthUI();
+    showToast("Kontoen din er slettet.", 3000);
+  } catch (e) {
+    showToast("Nettverksfeil. Prøv igjen.", 3000);
+  }
 }
 
 function updateAuthUI() {
@@ -3900,30 +3954,45 @@ async function login(mode){
   }
 }
 
+// Stores pending username between registration and OTP verification
+let _pendingVerifyUsername = "";
+
 async function register(mode){
-  const registerBtn = document.getElementById("registerBtn");
+  const registerBtn = document.getElementById(mode === "mobile" ? "mobileRegisterBtn" : "registerBtn");
   const origText = registerBtn ? registerBtn.textContent : "";
   if (registerBtn) { registerBtn.disabled = true; registerBtn.textContent = "Laster..."; }
   try {
   const form = new FormData();
   const sellerType = (document.getElementById("sellerType")?.value || "privat").toLowerCase();
   const companyName = document.getElementById("companyName")?.value || "";
+
   if (mode === "mobile") {
     const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
+    const em = (document.getElementById("mobileRegEmail")?.value || "").trim();
     const pw = document.getElementById("phonePassword").value;
     const fn = document.getElementById("mobileFullName")?.value.trim() || "";
     if (!ph || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
+    if (!em) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("E-postadresse er påkrevd", true); return; }
     form.append("phone", ph);
+    form.append("email", em);
     form.append("password", pw);
     if (fn) form.append("full_name", fn);
+    _pendingVerifyUsername = ph;
   } else {
     const u = document.getElementById("username").value.trim();
+    const em = (document.getElementById("regEmail")?.value || "").trim();
+    const ph = (document.getElementById("regPhone")?.value || "").trim().replace(/\s/g,"");
     const pw = document.getElementById("password").value;
     const fn = document.getElementById("fullName")?.value.trim() || "";
     if (!u || !pw) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
+    if (!em) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("E-postadresse er påkrevd", true); return; }
+    if (!ph) { if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; } showAuthMsg("Mobilnummer er påkrevd", true); return; }
     form.append("username", u);
+    form.append("email", em);
+    form.append("phone", ph);
     form.append("password", pw);
     if (fn) form.append("full_name", fn);
+    _pendingVerifyUsername = u;
   }
 
   form.append("seller_type", sellerType);
@@ -3943,10 +4012,78 @@ async function register(mode){
   }
   if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
   localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
-  showAuthMsg("Bruker opprettet! Du kan nå logge inn.", false);
+  // Show OTP verification pane
+  showVerifyEmailPane();
   } catch (e) {
     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
     showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
+  }
+}
+
+function showVerifyEmailPane() {
+  // Hide all panes, show the verify pane
+  document.querySelectorAll(".auth-pane").forEach(p => p.style.display = "none");
+  const vp = document.getElementById("pane-verify-email");
+  if (vp) vp.style.display = "";
+  const msgEl = document.getElementById("verifyEmailMsg");
+  if (msgEl) { msgEl.style.display = "block"; msgEl.style.color = "rgba(240,220,160,0.7)"; msgEl.textContent = "Sjekk innboksen din (og spam-mappen) for bekreftelseskoden."; }
+}
+
+async function verifyEmail() {
+  const btn = document.getElementById("verifyEmailBtn");
+  const code = (document.getElementById("otpInput")?.value || "").trim();
+  const msgEl = document.getElementById("verifyEmailMsg");
+  if (!code || code.length !== 6) {
+    if (msgEl) { msgEl.style.display="block"; msgEl.style.color="#e57373"; msgEl.textContent="Skriv inn den 6-sifrede koden fra e-posten."; }
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = "Bekrefter..."; }
+  try {
+    const form = new FormData();
+    form.append("username", _pendingVerifyUsername);
+    form.append("code", code);
+    const res = await fetchWithAutoApi("/verify-email", { method: "POST", body: form });
+    if (!res.ok) {
+      const err = await readErrorPayload(res);
+      if (msgEl) { msgEl.style.display="block"; msgEl.style.color="#e57373"; msgEl.textContent = err.detail || "Feil kode. Prøv igjen."; }
+      if (btn) { btn.disabled = false; btn.textContent = "Bekreft e-post"; }
+      return;
+    }
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem("token", data.access_token);
+      updateAuthUI();
+      fetchItems();
+      showToast("Konto bekreftet! Velkommen til SELGA.", 3000);
+    } else {
+      if (msgEl) { msgEl.style.display="block"; msgEl.style.color="#a8dfb8"; msgEl.textContent="E-post bekreftet! Du kan nå logge inn."; }
+    }
+    if (btn) { btn.disabled = false; btn.textContent = "Bekreft e-post"; }
+  } catch(e) {
+    if (msgEl) { msgEl.style.display="block"; msgEl.style.color="#e57373"; msgEl.textContent="Nettverksfeil. Prøv igjen."; }
+    if (btn) { btn.disabled = false; btn.textContent = "Bekreft e-post"; }
+  }
+}
+
+async function resendVerificationCode() {
+  if (!_pendingVerifyUsername) return;
+  const msgEl = document.getElementById("verifyEmailMsg");
+  try {
+    const form = new FormData();
+    form.append("username", _pendingVerifyUsername);
+    const res = await fetchWithAutoApi("/resend-verification", { method: "POST", body: form });
+    if (msgEl) {
+      msgEl.style.display = "block";
+      if (res.ok) {
+        msgEl.style.color = "#a8dfb8";
+        msgEl.textContent = "Ny kode sendt! Sjekk innboksen din.";
+      } else {
+        msgEl.style.color = "#e57373";
+        msgEl.textContent = "Kunne ikke sende kode på nytt. Prøv igjen.";
+      }
+    }
+  } catch(e) {
+    if (msgEl) { msgEl.style.display="block"; msgEl.style.color="#e57373"; msgEl.textContent="Nettverksfeil."; }
   }
 }
 
@@ -4854,6 +4991,15 @@ async function runHighLogicAssistant(){
     document.getElementById(thinkId).innerHTML = "<span>Kunne ikke koble til assistenten.</span>";
   }
   output.scrollTop = output.scrollHeight;
+}
+
+function goHome() {
+  activeCategory = "ALL";
+  activeSubcat = "";
+  renderCategoryButtons();
+  fetchItems();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  updateAuthUI();
 }
 
 window.onload=async ()=>{
