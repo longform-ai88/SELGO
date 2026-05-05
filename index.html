@@ -2492,18 +2492,18 @@ width: 146px;
 <div class="auth-card-header">
   <div class="auth-logo" aria-hidden="true">S</div>
   <div class="auth-eyebrow">SELGA konto</div>
-  <h2 class="auth-title">Logg inn / Registrer</h2>
-  <p class="auth-subtitle">Få tilgang til annonser, meldinger og publisering i ett rent og trygt steg.</p>
+  <h2 class="auth-title">Logg inn</h2>
+  <p class="auth-subtitle">Fortsett til selga.no</p>
 </div>
 
-<div class="auth-tabs">
+<div class="auth-tabs" style="display:none">
   <button class="auth-tab active" onclick="switchAuthTab('username',this)">Brukernavn</button>
   <button class="auth-tab" onclick="switchAuthTab('mobile',this)">Mobilnummer</button>
   <button class="auth-tab" onclick="switchAuthTab('vipps',this)">Vipps</button>
 </div>
 
 <!-- Brukernavn-pane -->
-<div class="auth-pane active" id="pane-username">
+<div class="auth-pane" id="pane-username">
   <div class="field">
     <label for="fullName">Fullt navn</label>
     <input id="fullName" placeholder="Navnet som vises for kjøpere" autocomplete="name">
@@ -2607,21 +2607,24 @@ width: 146px;
 </div>
 
 <!-- Dedicated Login Pane (shown after email verification) -->
-<div class="auth-pane" id="pane-login">
+<div class="auth-pane active" id="pane-login">
+  <p class="auth-subtitle" style="margin:0 0 14px">Vi sender en påloggingskode til epostadressen din.</p>
   <div class="field">
-    <label for="loginUsername">Brukernavn eller mobilnummer</label>
-    <input id="loginUsername" type="text" placeholder="Skriv inn brukernavn eller telefon" autocomplete="username">
+    <label for="loginEmail">Epostadresse</label>
+    <input id="loginEmail" type="email" placeholder="din@epost.no" autocomplete="email">
   </div>
-  <div class="field">
-    <label for="loginPassword">Passord</label>
-    <input id="loginPassword" type="password" placeholder="Skriv inn passord" autocomplete="current-password">
+  <div class="field" style="margin-top:10px">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input id="rememberMe" type="checkbox">
+      <span>Husk meg</span>
+    </label>
   </div>
   <div class="auth-actions">
-    <button type="button" id="dedicatedLoginBtn" onclick="loginDedicated()">Logg inn</button>
-    <div class="auth-secondary-note">Ikke registrert ennå?</div>
-    <button type="button" class="ghost" onclick="switchAuthTab('username')">Registrer her</button>
+    <button type="button" id="emailContinueBtn" onclick="startEmailAuthFlow()">Fortsett</button>
+    <div class="auth-secondary-note">Ikke registrert enda?</div>
+    <button type="button" class="ghost" onclick="openRegisterFromEmail()">Lag en konto</button>
   </div>
-  <div id="dedicatedLoginError" style="display:none;margin-top:12px;font-size:13px;color:#c0392b"></div>
+  <div id="emailStartMsg" style="display:none;margin-top:12px;font-size:13px;color:#c0392b"></div>
 </div>
 
 </div>
@@ -4132,6 +4135,7 @@ async function loginDedicated() {
 
 // Stores pending username between registration and OTP verification
 let _pendingVerifyUsername = "";
+let _pendingVerifyEmail = "";
 
 async function register(mode){
   const registerBtn = document.getElementById(mode === "mobile" ? "mobileRegisterBtn" : "registerBtn");
@@ -4154,6 +4158,7 @@ async function register(mode){
     form.append("password", pw);
     if (fn) form.append("full_name", fn);
     _pendingVerifyUsername = ph;
+    _pendingVerifyEmail = em;
   } else {
     const u = document.getElementById("username").value.trim();
     const em = (document.getElementById("regEmail")?.value || "").trim();
@@ -4169,6 +4174,7 @@ async function register(mode){
     form.append("password", pw);
     if (fn) form.append("full_name", fn);
     _pendingVerifyUsername = u;
+    _pendingVerifyEmail = em;
   }
 
   form.append("seller_type", sellerType);
@@ -4243,7 +4249,72 @@ function showVerifyEmailPane() {
   const vp = document.getElementById("pane-verify-email");
   if (vp) vp.classList.add("active");
   const msgEl = document.getElementById("verifyEmailMsg");
-  if (msgEl) { msgEl.style.display = "block"; msgEl.style.color = "rgba(240,220,160,0.7)"; msgEl.textContent = "Sjekk innboksen din (og spam-mappen) for bekreftelseskoden."; }
+  if (msgEl) { msgEl.style.display = "block"; msgEl.style.color = "rgba(240,220,160,0.7)"; msgEl.textContent = "Sjekk e-postadressen din for verifiseringskoden."; }
+}
+
+async function startEmailAuthFlow() {
+  const btn = document.getElementById("emailContinueBtn");
+  const msgEl = document.getElementById("emailStartMsg");
+  const email = (document.getElementById("loginEmail")?.value || "").trim().toLowerCase();
+  const remember = !!document.getElementById("rememberMe")?.checked;
+
+  if (!email) {
+    if (msgEl) { msgEl.style.display = "block"; msgEl.textContent = "Skriv inn epostadresse."; }
+    return;
+  }
+
+  if (remember) {
+    localStorage.setItem("rememberLoginEmail", email);
+  } else {
+    localStorage.removeItem("rememberLoginEmail");
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "Sender kode..."; }
+  if (msgEl) { msgEl.style.display = "none"; }
+
+  try {
+    const form = new FormData();
+    form.append("email", email);
+
+    let res;
+    try {
+      res = await fetchWithAutoApi("/resend-verification", { method: "POST", body: form });
+    } catch (_) {
+      res = await fetch(window.location.origin + "/resend-verification", { method: "POST", body: form });
+    }
+
+    if (!res.ok) {
+      const err = await readErrorPayload(res);
+      if (msgEl) {
+        msgEl.style.display = "block";
+        msgEl.textContent = err.detail || "Fant ikke konto med denne epostadressen. Velg 'Lag en konto'.";
+      }
+      if (btn) { btn.disabled = false; btn.textContent = "Fortsett"; }
+      return;
+    }
+
+    _pendingVerifyEmail = email;
+    _pendingVerifyUsername = "";
+    showVerifyEmailPane();
+    if (btn) { btn.disabled = false; btn.textContent = "Fortsett"; }
+  } catch (_) {
+    if (msgEl) {
+      msgEl.style.display = "block";
+      msgEl.textContent = "Nettverksfeil. Prøv igjen.";
+    }
+    if (btn) { btn.disabled = false; btn.textContent = "Fortsett"; }
+  }
+}
+
+function openRegisterFromEmail() {
+  const email = (document.getElementById("loginEmail")?.value || "").trim().toLowerCase();
+  const regEmail = document.getElementById("regEmail");
+  const mobileRegEmail = document.getElementById("mobileRegEmail");
+  if (email) {
+    if (regEmail) regEmail.value = email;
+    if (mobileRegEmail) mobileRegEmail.value = email;
+  }
+  switchAuthTab("username");
 }
 
 async function verifyEmail() {
@@ -4257,7 +4328,11 @@ async function verifyEmail() {
   if (btn) { btn.disabled = true; btn.textContent = "Bekrefter..."; }
   try {
     const form = new FormData();
-    form.append("username", _pendingVerifyUsername);
+    if (_pendingVerifyUsername) {
+      form.append("username", _pendingVerifyUsername);
+    } else if (_pendingVerifyEmail) {
+      form.append("email", _pendingVerifyEmail);
+    }
     form.append("code", code);
     let res;
     try {
@@ -4278,7 +4353,8 @@ async function verifyEmail() {
       localStorage.setItem("token", data.access_token);
       updateAuthUI();
       fetchItems();
-      showToast("Konto bekreftet! Velkommen til SELGA.", 3000);
+      showToast("Verifisert! Fortsetter til selga.no...", 2500);
+      setTimeout(() => location.reload(), 500);
     } else {
       // Verification succeeded but no auto-login: show dedicated login form
       document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
@@ -4314,11 +4390,15 @@ async function verifyEmail() {
 }
 
 async function resendVerificationCode() {
-  if (!_pendingVerifyUsername) return;
+  if (!_pendingVerifyUsername && !_pendingVerifyEmail) return;
   const msgEl = document.getElementById("verifyEmailMsg");
   try {
     const form = new FormData();
-    form.append("username", _pendingVerifyUsername);
+    if (_pendingVerifyUsername) {
+      form.append("username", _pendingVerifyUsername);
+    } else {
+      form.append("email", _pendingVerifyEmail);
+    }
     let res;
     try {
       res = await fetchWithAutoApi("/resend-verification", { method: "POST", body: form });
@@ -4341,6 +4421,16 @@ async function resendVerificationCode() {
     if (msgEl) { msgEl.style.display="block"; msgEl.style.color="#e57373"; msgEl.textContent="Nettverksfeil."; }
   }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const remembered = localStorage.getItem("rememberLoginEmail") || "";
+  const emailInput = document.getElementById("loginEmail");
+  const remember = document.getElementById("rememberMe");
+  if (remembered && emailInput) {
+    emailInput.value = remembered;
+    if (remember) remember.checked = true;
+  }
+});
 
 async function loginWithVipps() {
   const statusEl = document.getElementById("vippsStatus");

@@ -405,11 +405,21 @@ def register(
 
 @app.post("/verify-email")
 def verify_email(
-    username: str = Form(...),
+    username: str = Form(None),
+    email: str = Form(None),
     code: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    user = db.query(UserDB).filter(UserDB.username == username).first()
+    username_clean = (username or "").strip()
+    email_clean = (email or "").strip().lower()
+    if not username_clean and not email_clean:
+        raise HTTPException(400, "Brukernavn eller e-post er påkrevd")
+
+    user = None
+    if username_clean:
+        user = db.query(UserDB).filter(UserDB.username == username_clean).first()
+    if not user and email_clean:
+        user = db.query(UserDB).filter(UserDB.email == email_clean).first()
     if not user:
         raise HTTPException(404, "Bruker ikke funnet")
     if user.email_verified:
@@ -424,8 +434,21 @@ def verify_email(
 
 
 @app.post("/resend-verification")
-def resend_verification(username: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(UserDB).filter(UserDB.username == username).first()
+def resend_verification(
+    username: str = Form(None),
+    email: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    username_clean = (username or "").strip()
+    email_clean = (email or "").strip().lower()
+    if not username_clean and not email_clean:
+        raise HTTPException(400, "Brukernavn eller e-post er påkrevd")
+
+    user = None
+    if username_clean:
+        user = db.query(UserDB).filter(UserDB.username == username_clean).first()
+    if not user and email_clean:
+        user = db.query(UserDB).filter(UserDB.email == email_clean).first()
     if not user:
         raise HTTPException(404, "Bruker ikke funnet")
     if user.email_verified:
