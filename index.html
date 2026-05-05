@@ -3790,6 +3790,11 @@ async function registerFromProfileModal() {
     setProfileModalMessage("Fyll inn brukernavn, e-post, mobilnummer og passord", true);
     return;
   }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    setProfileModalMessage("Ugyldig e-postadresse", true);
+    return;
+  }
 
   const form = new FormData();
   form.append("username", username);
@@ -3799,7 +3804,13 @@ async function registerFromProfileModal() {
   if (fullName) form.append("full_name", fullName);
 
   try {
-    const res = await fetchWithAutoApi("/register", { method: "POST", body: form });
+    let res;
+    try {
+      res = await fetchWithAutoApi("/register", { method: "POST", body: form });
+    } catch (_) {
+      // Fallback for stale API base or transient webview network routing issues.
+      res = await fetch(window.location.origin + "/register", { method: "POST", body: form });
+    }
     if (!res.ok) {
       const err = await readErrorPayload(res);
       setProfileModalMessage(`Registrering feilet. ${err.detail || ""}`.trim(), true);
