@@ -268,13 +268,15 @@ def _send_verification_email(to_email: str, otp: str) -> None:
     </div>
     """
     msg.attach(MIMEText(html, "html"))
+    print(f"[EMAIL-OTP] Sending to {to_email} via {SMTP_HOST}:{SMTP_PORT} user={SMTP_USER} from={FROM_EMAIL}")
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as s:
             s.starttls()
             s.login(SMTP_USER, SMTP_PASS)
             s.sendmail(FROM_EMAIL, [to_email], msg.as_string())
+        print(f"[EMAIL-OTP] Sent OK to {to_email}")
     except Exception as exc:
-        print(f"[EMAIL-OTP] SMTP error: {exc}")
+        print(f"[EMAIL-OTP] SMTP error ({type(exc).__name__}): {exc}")
         # Don't raise — OTP is saved in DB, admin can look it up
 
 # === DB ===

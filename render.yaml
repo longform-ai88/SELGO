@@ -27,7 +27,7 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: FROM_EMAIL
-        value: no-reply@selga.no
+        value: tobias.mikkelsen-86@hotmail.com
     disk:
       name: selga-data
       mountPath: /data
