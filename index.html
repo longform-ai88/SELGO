@@ -2744,12 +2744,12 @@ width: 146px;
 </div>
 
 <!-- Confirm delete account modal -->
-<div id="deleteConfirmModal" class="legal-modal-backdrop" style="display:none">
+<div id="deleteConfirmModal" class="legal-modal-backdrop" style="display:none;z-index:2000">
   <div class="legal-modal" onclick="event.stopPropagation()" style="max-width:340px;text-align:center">
     <h3 style="margin:0 0 12px;color:#c0392b">Slett konto</h3>
     <p style="font-size:14px;line-height:1.55;color:#1a3557;margin-bottom:20px">Er du sikker? All data slettes permanent og kan ikke gjenopprettes.</p>
     <div style="display:flex;gap:10px;justify-content:center">
-      <button type="button" class="ghost" onclick="document.getElementById('deleteConfirmModal').style.display='none'">Avbryt</button>
+      <button type="button" class="ghost" onclick="document.getElementById('deleteConfirmModal').style.display='none';openProfileModal()">Avbryt</button>
       <button type="button" id="confirmDeleteBtn" style="background:#c0392b;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:700;cursor:pointer" onclick="_doDeleteAccount()">Slett konto</button>
     </div>
     <div id="deleteConfirmMsg" style="display:none;margin-top:12px;font-size:13px"></div>
@@ -3817,6 +3817,9 @@ function deleteAccountFromProfileModal() {
   if (msg) { msg.style.display = "none"; msg.textContent = ""; }
   const btn = document.getElementById("confirmDeleteBtn");
   if (btn) { btn.disabled = false; btn.textContent = "Slett konto"; }
+  // Close profile modal first so delete modal appears on top cleanly
+  const profileBackdrop = document.getElementById("profileModal");
+  if (profileBackdrop) profileBackdrop.style.display = "none";
   if (modal) modal.style.display = "flex";
 }
 
