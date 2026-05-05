@@ -3734,10 +3734,12 @@ function renderProfileModalBody() {
   const isLogin = profileModalMode === "login";
   title.textContent = isLogin ? "Logg inn" : "Registrer";
   body.innerHTML = `
-    <p class="profile-info">${isLogin ? "Logg inn med brukernavn og passord." : "Opprett ny bruker med brukernavn og passord."}</p>
+    <p class="profile-info">${isLogin ? "Logg inn med brukernavn og passord." : "Opprett ny bruker med brukernavn, e-post, mobilnummer og passord."}</p>
     <div class="profile-form">
       ${isLogin ? "" : '<input id="profileFullNameInput" placeholder="Fullt navn (valgfritt)">'}
       <input id="profileUsernameInput" placeholder="Brukernavn">
+      ${isLogin ? "" : '<input id="profileEmailInput" type="email" placeholder="E-postadresse">'}
+      ${isLogin ? "" : '<input id="profilePhoneInput" type="tel" placeholder="Mobilnummer">'}
       <input id="profilePasswordInput" type="password" placeholder="Passord">
     </div>
     <div id="profileModalMsg" style="display:none"></div>
@@ -3781,14 +3783,18 @@ async function loginFromProfileModal() {
 async function registerFromProfileModal() {
   const fullName = (document.getElementById("profileFullNameInput")?.value || "").trim();
   const username = (document.getElementById("profileUsernameInput")?.value || "").trim();
+  const email = (document.getElementById("profileEmailInput")?.value || "").trim();
+  const phone = (document.getElementById("profilePhoneInput")?.value || "").trim().replace(/\s/g, "");
   const password = document.getElementById("profilePasswordInput")?.value || "";
-  if (!username || !password) {
-    setProfileModalMessage("Fyll inn brukernavn og passord", true);
+  if (!username || !password || !email || !phone) {
+    setProfileModalMessage("Fyll inn brukernavn, e-post, mobilnummer og passord", true);
     return;
   }
 
   const form = new FormData();
   form.append("username", username);
+  form.append("email", email);
+  form.append("phone", phone);
   form.append("password", password);
   if (fullName) form.append("full_name", fullName);
 
