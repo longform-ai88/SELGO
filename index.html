@@ -2540,7 +2540,7 @@ width: 146px;
     <input id="inviteCode" placeholder="Valgfritt" autocomplete="off">
   </div>
   <div class="auth-actions">
-    <button id="loginBtn">Logg inn</button>
+    <button id="loginBtn" onclick="login('username')">Logg inn</button>
     <div class="auth-secondary-note">Ny hos SELGA?</div>
     <button onclick="register('username')" id="registerBtn" class="ghost">Registrer ny bruker</button>
     <div class="auth-vipps-divider">Eller bruk Vipps</div>
@@ -4216,11 +4216,24 @@ async function verifyEmail() {
       const isPhoneIdentifier = /^\d+$/.test(_pendingVerifyUsername || "");
       if (isPhoneIdentifier) {
         switchAuthTab("mobile");
-        setTimeout(() => { const el = document.getElementById("phoneInput"); if (el) el.value = _pendingVerifyUsername; }, 50);
+        setTimeout(() => { 
+          const el = document.getElementById("phoneInput"); 
+          if (el) el.value = _pendingVerifyUsername; 
+          el?.focus();
+        }, 50);
       } else {
         switchAuthTab("username");
-        setTimeout(() => { const el = document.getElementById("username"); if (el) el.value = _pendingVerifyUsername; }, 50);
+        setTimeout(() => { 
+          const el = document.getElementById("username"); 
+          if (el) el.value = _pendingVerifyUsername; 
+          el?.focus();
+        }, 50);
       }
+      // Ensure auth panel is visible
+      const authPanel = document.getElementById("authPanel");
+      if (authPanel) authPanel.style.display = "";
+      // Scroll to login form
+      window.scrollTo(0, 0);
     }
     if (btn) { btn.disabled = false; btn.textContent = "Bekreft e-post"; }
   } catch(e) {
