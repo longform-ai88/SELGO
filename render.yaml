@@ -27,7 +27,7 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: FROM_EMAIL
-        value: contact@longform-ai88.com
+        value: tobias.mikkelsen-86@hotmail.com
     disk:
       name: selga-data
       mountPath: /data
