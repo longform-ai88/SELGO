@@ -3662,7 +3662,19 @@ function isRegisteredLocally() {
 
 function openProfileModal(event) {
   if (event) event.preventDefault();
-  profileModalMode = isRegisteredLocally() ? "login" : "register";
+  const token = localStorage.getItem("token");
+  if (!token) {
+    // Not logged in — scroll to auth panel instead of showing old modal
+    const authPanel = document.getElementById("authPanel");
+    if (authPanel) {
+      authPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      const emailInput = document.getElementById("loginEmail");
+      if (emailInput) emailInput.focus();
+    }
+    return;
+  }
+  // Logged in — show profile modal
+  profileModalMode = "login";
   renderProfileModalBody();
   const modal = document.getElementById("profileModal");
   if (modal) modal.style.display = "flex";
