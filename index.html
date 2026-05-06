@@ -3516,6 +3516,11 @@ async function createListingWithProvider(providerOverride = null){
     showPublishStatus(msg, true);
     return { ok: false, data: { detail: msg } };
   }
+  if (!res.ok) {
+    console.error("[createListing HTTP error]", res.status, data);
+    const errorMsg = data?.detail || `HTTP ${res.status}`;
+    return { ok: false, data: { detail: errorMsg } };
+  }
   return { ok: res.ok, data };
 }
 
