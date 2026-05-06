@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import text, inspect as sa_inspect
+from sqlalchemy import text, inspect as sa_inspect, func
+from sqlalchemy.exc import IntegrityError
 from database import SessionLocal, engine, Base, get_db
 from models import ItemDB, UserDB, ListingOwnerDB, ContactMessageDB, PaymentOrderDB
 from jose import jwt
@@ -159,9 +160,17 @@ BREVO_API_KEY = _clean_env(os.getenv("BREVO_API_KEY", ""))
 FROM_EMAIL = _clean_env(os.getenv("FROM_EMAIL", "tobias.mikkelsen-86@hotmail.com"))
 FROM_NAME = _clean_env(os.getenv("FROM_NAME", "SELGA"))
 
-pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+pwd = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 oauth = OAuth2PasswordBearer(tokenUrl="login")
 app.include_router(build_vipps_router(oauth, SECRET, ALGO, APP_BASE_URL))
+
+
+def _verify_password(plain_password: str, stored_password: str) -> bool:
+    try:
+        return pwd.verify(plain_password, stored_password)
+    except Exception:
+        # Fallback for legacy/plaintext rows created before hashing was consistent.
+        return (stored_password or "") == (plain_password or "")
 
 
 def normalize_payment_provider(provider: Optional[str]) -> str:
@@ -413,6 +422,12 @@ def register(
 ):
     # Require phone
     phone_clean = (phone or "").strip().replace(" ", "")
+    phone_digits = re.sub(r"\D", "", phone_clean)
+    phone_candidates = {phone_clean}
+    if phone_digits:
+        phone_candidates.add(phone_digits)
+        if phone_digits.startswith("47") and len(phone_digits) > 8:
+            phone_candidates.add(phone_digits[-8:])
     if not phone_clean:
         raise HTTPException(400, "Mobilnummer er påkrevd")
 
@@ -427,19 +442,36 @@ def register(
     if not username and not phone_clean:
         raise HTTPException(400, "Brukernavn eller mobilnummer er påkrevd")
 
-    effective_username = (username or "").strip() or phone_clean
+    username_clean = (username or "").strip()
+    if username_clean.lower() in {"undefined", "null", "none"}:
+        username_clean = ""
+    username_provided = bool(username_clean)
+    effective_username = username_clean or phone_clean
 
-    # Check for existing username
-    if db.query(UserDB).filter(UserDB.username == effective_username).first():
-        raise HTTPException(400, "Bruker finnes allerede")
+    print(
+        f"[REGISTER] attempt username='{effective_username}' phone='{phone_clean}' email='{email_clean}'"
+    )
 
-    # Check for existing email
-    if db.query(UserDB).filter(UserDB.email == email_clean).first():
+    # Check for existing phone
+    if db.query(UserDB).filter(UserDB.phone.in_(list(phone_candidates))).first():
+        print(f"[REGISTER] duplicate phone='{phone_clean}'")
+        raise HTTPException(400, "Mobilnummer er allerede registrert")
+
+    # Check for existing email (case-insensitive)
+    if db.query(UserDB).filter(func.lower(UserDB.email) == email_clean).first():
+        print(f"[REGISTER] duplicate email='{email_clean}'")
         raise HTTPException(400, "E-postadressen er allerede registrert")
 
-    is_free = bool(INVITE_CODE and invite_code and invite_code.strip() == INVITE_CODE)
+    # Check for existing username after phone/email checks.
+    if db.query(UserDB).filter(UserDB.username == effective_username).first():
+        print(f"[REGISTER] duplicate username='{effective_username}'")
+        if username_provided:
+            raise HTTPException(400, "Bruker finnes allerede")
+        raise HTTPException(400, "Mobilnummer er allerede registrert")
 
+    is_free = bool(INVITE_CODE and invite_code and invite_code.strip() == INVITE_CODE)
     otp = _generate_otp()
+
     user = UserDB(
         username=effective_username,
         password=pwd.hash(password),
@@ -451,10 +483,32 @@ def register(
         is_verified=0,
         is_free=int(is_free),
     )
-    db.add(user)
-    db.commit()
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    except IntegrityError as exc:
+        db.rollback()
+        print(
+            f"[REGISTER] integrity error username='{effective_username}' phone='{phone_clean}' email='{email_clean}'"
+        )
+        msg = str(getattr(exc, "orig", exc)).lower()
+        if "email" in msg:
+            raise HTTPException(400, "E-postadressen er allerede registrert")
+        if "phone" in msg:
+            raise HTTPException(400, "Mobilnummer er allerede registrert")
+        if "username" in msg or "users_username_key" in msg:
+            if username_provided:
+                raise HTTPException(400, "Bruker finnes allerede")
+            raise HTTPException(400, "Mobilnummer er allerede registrert")
+        raise HTTPException(400, "Bruker finnes allerede")
+    except Exception as exc:
+        db.rollback()
+        print(f"[REGISTER] unexpected error: {type(exc).__name__}: {exc}")
+        raise
 
     _send_verification_email(email_clean, otp)
+    print(f"[REGISTER] created user_id={user.id} username='{user.username}' otp_sent=1")
     return {
         "msg": "ok",
         "is_free": is_free,
@@ -532,15 +586,41 @@ def login(
     if not identifier:
         raise HTTPException(400, "Mobilnummer eller e-post er påkrevd")
 
-    user = db.query(UserDB).filter(
-        (UserDB.phone == identifier) | (UserDB.email == identifier)
-    ).first()
+    identifier_email = identifier.lower()
+    # Accept phone entered with spaces, +47, or other separators.
+    digits = re.sub(r"\D", "", identifier)
+    phone_candidates = {identifier.replace(" ", "")}
+    if digits:
+        phone_candidates.add(digits)
+        if digits.startswith("47") and len(digits) > 8:
+            phone_candidates.add(digits[-8:])
+
+    print(
+        f"[LOGIN] attempt identifier='{identifier}' email_key='{identifier_email}' phone_keys={sorted(phone_candidates)}"
+    )
+
+    matched_users = db.query(UserDB).filter(
+        (UserDB.username == identifier) |
+        (UserDB.phone.in_(list(phone_candidates))) |
+        (UserDB.email == identifier) |
+        (UserDB.email == identifier_email)
+    ).order_by(UserDB.id.desc()).all()
+
+    if not matched_users:
+        print("[LOGIN] no matching user")
+        raise HTTPException(401, "Feil login")
+
+    user = None
+    for candidate in matched_users:
+        if _verify_password(password, candidate.password):
+            user = candidate
+            break
 
     if not user:
+        print(f"[LOGIN] password mismatch across {len(matched_users)} matched users")
         raise HTTPException(401, "Feil login")
 
-    if not pwd.verify(password, user.password):
-        raise HTTPException(401, "Feil login")
+    print(f"[LOGIN] success username='{user.username}'")
 
     # Allow existing accounts to be upgraded to free access with invite code.
     if INVITE_CODE and invite_code and invite_code.strip() == INVITE_CODE and not bool(user.is_free):

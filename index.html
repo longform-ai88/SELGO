@@ -3803,7 +3803,16 @@ async function registerFromProfileModal() {
       setProfileModalMessage(`Registrering feilet. ${err.detail || ""}`.trim(), true);
       return;
     }
+    const data = await res.json().catch(() => ({}));
     localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
+    if (data.access_token) {
+      localStorage.setItem("token", data.access_token);
+      if (data.is_free !== undefined) localStorage.setItem("is_free", data.is_free ? "1" : "0");
+      updateAuthUI();
+      closeProfileModal();
+      location.reload();
+      return;
+    }
     setProfileModalMode("login");
     setProfileModalMessage("Bruker opprettet. Logg inn nå.", false);
   } catch (e) {
@@ -3964,69 +3973,6 @@ async function activateFreeAccess() {
   }
 }
 
-async function login(mode){
-  const loginBtn = document.getElementById("loginBtn");
-  const origText = loginBtn ? loginBtn.textContent : "";
-  if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = "Laster..."; }
-  try {
-  const form = new FormData();
-  const inviteCode = (document.getElementById(mode === "mobile" ? "mobileInviteCode" : "inviteCode")?.value || "").trim();
-  if (inviteCode) form.append("invite_code", inviteCode);
-  if (mode === "mobile") {
-    const ph = document.getElementById("phoneInput").value.trim().replace(/\s/g,"");
-    const pw = document.getElementById("phonePassword").value;
-    if (!ph || !pw) { if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; } showAuthMsg("Fyll inn mobilnummer og passord", true); return; }
-    form.append("phone", ph);
-    form.append("password", pw);
-  } else {
-    const u = document.getElementById("username").value.trim();
-    const pw = document.getElementById("password").value;
-    if (!u || !pw) { if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; } showAuthMsg("Fyll inn brukernavn og passord", true); return; }
-    form.append("username", u);
-    form.append("password", pw);
-  }
-
-  let res;
-  try {
-    res = await fetchWithAutoApi("/login", {
-      method: "POST",
-      body: form
-    });
-  } catch (err) {
-    // Fallback: try direct origin fetch if API base fails
-    try {
-      res = await fetch(window.location.origin + "/login", {
-        method: "POST",
-        body: form
-      });
-    } catch (_) {
-      if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
-      showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
-      return;
-    }
-  }
-
-  if (!res.ok) {
-    const err = await readErrorPayload(res);
-    showAuthMsg(`Innlogging feilet (${res.status}). ${err.detail || ""}`.trim(), true);
-    if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
-    return;
-  }
-  const data = await res.json();
-  localStorage.setItem("token", data.access_token);
-  localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
-  updateAuthUI();
-  if (loginBtn) {
-    loginBtn.disabled = false;
-    loginBtn.textContent = "Logget inn";
-  }
-  location.reload();
-  } catch (e) {
-    if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = origText; }
-    showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);
-  }
-}
-
 async function loginDedicated() {
   const btn = document.getElementById("dedicatedLoginBtn");
   const msgEl = document.getElementById("dedicatedLoginError");
@@ -4136,9 +4082,17 @@ async function register(){
     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
     return;
   }
+  const data = await res.json().catch(() => ({}));
   if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
   localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
-  // Show OTP verification pane
+  if (data.access_token) {
+    localStorage.setItem("token", data.access_token);
+    if (data.is_free !== undefined) localStorage.setItem("is_free", data.is_free ? "1" : "0");
+    showAuthMsg("Konto opprettet og innlogget.", false);
+    setTimeout(() => location.reload(), 400);
+    return;
+  }
+  // Backward compatibility if API still requires OTP.
   showVerifyEmailPane();
   } catch (e) {
     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
@@ -4207,10 +4161,15 @@ async function doLogin() {
 
     const data = await res.json();
     if (data.access_token) {
-      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("token", data.access_token);
       if (data.is_free !== undefined) localStorage.setItem("is_free", data.is_free ? "1" : "0");
-      closeAuthModal();
-      await loadCurrentUser();
+      localStorage.setItem(PROFILE_REGISTERED_KEY, "1");
+      updateAuthUI();
+      fetchItems();
+      showToast("Innlogget!", 2000);
+      if (btn) { btn.disabled = false; btn.textContent = "Logget inn"; }
+      setTimeout(() => location.reload(), 300);
+      return;
     }
   } catch (_) {
     if (msgEl) {
@@ -5353,10 +5312,6 @@ if (flowPriceEl) flowPriceEl.addEventListener("input", renderFlowPricingPreview)
 if (flowCategoryEl) flowCategoryEl.addEventListener("change", () => { updateFlowSubcategoryOptions(); renderFlowPricingPreview(); });
 if (flowModeEl) flowModeEl.addEventListener("change", renderFlowPricingPreview);
 
-const loginBtn = document.getElementById("loginBtn");
-if (loginBtn) {
-  loginBtn.addEventListener("click", () => login("username"));
-}
 updateSubcategoryOptions();
 updateFlowSubcategoryOptions();
 updatePaymentActionButtons();
