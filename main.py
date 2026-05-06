@@ -173,6 +173,47 @@ def _verify_password(plain_password: str, stored_password: str) -> bool:
         return (stored_password or "") == (plain_password or "")
 
 
+def _phone_candidates(raw_phone: Optional[str]) -> List[str]:
+    phone_clean = (raw_phone or "").strip().replace(" ", "")
+    phone_digits = re.sub(r"\D", "", phone_clean)
+    candidates = {phone_clean} if phone_clean else set()
+    if phone_digits:
+        candidates.add(phone_digits)
+        if phone_digits.startswith("47") and len(phone_digits) > 8:
+            candidates.add(phone_digits[-8:])
+    return [value for value in candidates if value]
+
+
+def _resolve_item_owner_username(db: Session, item_id: int, item: Optional[ItemDB] = None) -> Optional[str]:
+    owner = db.query(ListingOwnerDB).filter(ListingOwnerDB.item_id == item_id).first()
+    if owner and owner.username:
+        return owner.username
+
+    payment_owner = (
+        db.query(PaymentOrderDB.buyer_username)
+        .filter(PaymentOrderDB.item_id == item_id)
+        .order_by(PaymentOrderDB.id.desc())
+        .first()
+    )
+    if payment_owner and payment_owner[0]:
+        return payment_owner[0]
+
+    item = item or db.query(ItemDB).filter(ItemDB.id == item_id).first()
+    if item and item.seller_phone:
+        phone_candidates = _phone_candidates(item.seller_phone)
+        if phone_candidates:
+            phone_owner = (
+                db.query(UserDB.username)
+                .filter(UserDB.phone.in_(phone_candidates))
+                .order_by(UserDB.id.desc())
+                .first()
+            )
+            if phone_owner and phone_owner[0]:
+                return phone_owner[0]
+
+    return None
+
+
 def normalize_payment_provider(provider: Optional[str]) -> str:
     value = (provider or "").strip().lower()
     if value in {"stripe", "vipps"}:
@@ -428,12 +469,7 @@ def register(
 
     # Require phone
     phone_clean = (phone or "").strip().replace(" ", "")
-    phone_digits = re.sub(r"\D", "", phone_clean)
-    phone_candidates = {phone_clean}
-    if phone_digits:
-        phone_candidates.add(phone_digits)
-        if phone_digits.startswith("47") and len(phone_digits) > 8:
-            phone_candidates.add(phone_digits[-8:])
+    phone_candidates = set(_phone_candidates(phone_clean))
     if not phone_clean:
         raise HTTPException(400, "Mobilnummer er påkrevd")
 
@@ -729,8 +765,7 @@ def listings(db: Session = Depends(get_db)):
     for item in items:
         if item.expires_at and item.expires_at < now:
             continue
-        owner = db.query(ListingOwnerDB).filter(ListingOwnerDB.item_id == item.id).first()
-        seller_username = owner.username if owner else None
+        seller_username = _resolve_item_owner_username(db, item.id, item)
         seller_user = db.query(UserDB).filter(UserDB.username == seller_username).first() if seller_username else None
         d = {c.name: getattr(item, c.name) for c in item.__table__.columns}
         d["seller_username"] = seller_username
@@ -850,11 +885,8 @@ def delete_listing(item_id: int, token: str = Depends(oauth), db: Session = Depe
     if not user:
         raise HTTPException(401, "Ikke innlogget")
 
-    owner = db.query(ListingOwnerDB).filter(
-        ListingOwnerDB.item_id == item_id,
-        ListingOwnerDB.username == user.username
-    ).first()
-    if not owner:
+    owner_username = _resolve_item_owner_username(db, item_id)
+    if owner_username != user.username:
         raise HTTPException(403, "Du eier ikke denne annonsen")
 
     item = db.query(ItemDB).filter(ItemDB.id == item_id).first()
@@ -873,11 +905,8 @@ def activate_listing(item_id: int, token: str = Depends(oauth), db: Session = De
     if not user:
         raise HTTPException(401, "Ikke innlogget")
 
-    owner = db.query(ListingOwnerDB).filter(
-        ListingOwnerDB.item_id == item_id,
-        ListingOwnerDB.username == user.username
-    ).first()
-    if not owner:
+    owner_username = _resolve_item_owner_username(db, item_id)
+    if owner_username != user.username:
         raise HTTPException(403, "Du eier ikke denne annonsen")
 
     item = db.query(ItemDB).filter(ItemDB.id == item_id).first()
@@ -1138,8 +1167,7 @@ def contact_seller(
     if not buyer:
         raise HTTPException(401, "Ikke innlogget")
 
-    owner = db.query(ListingOwnerDB).filter(ListingOwnerDB.item_id == item_id).first()
-    seller_username = owner.username if owner else None
+    seller_username = _resolve_item_owner_username(db, item_id)
     if not seller_username:
         raise HTTPException(404, "Selger ikke funnet for annonsen")
 
@@ -1166,7 +1194,10 @@ def get_inbox_messages(limit: int = 30, token: str = Depends(oauth), db: Session
     safe_limit = max(1, min(int(limit or 30), 100))
     rows = (
         db.query(ContactMessageDB)
-        .filter(ContactMessageDB.seller_username == user.username)
+        .filter(
+            (ContactMessageDB.seller_username == user.username) |
+            (ContactMessageDB.buyer_username == user.username)
+        )
         .order_by(ContactMessageDB.id.desc())
         .limit(safe_limit)
         .all()
@@ -1179,10 +1210,12 @@ def get_inbox_messages(limit: int = 30, token: str = Depends(oauth), db: Session
     unread_count = 0
     messages = []
     for r in rows:
+        is_recipient = r.seller_username == user.username
         is_read = (r.status or "").lower() == "read"
-        if not is_read:
+        if is_recipient and not is_read:
             unread_count += 1
         item = item_map.get(r.item_id)
+        sender_username = r.buyer_username if is_recipient else r.seller_username
         messages.append(
             {
                 "id": r.id,
@@ -1190,6 +1223,8 @@ def get_inbox_messages(limit: int = 30, token: str = Depends(oauth), db: Session
                 "item_title": item.title if item else None,
                 "buyer_username": r.buyer_username,
                 "seller_username": r.seller_username,
+                "sender_username": sender_username,
+                "is_recipient": is_recipient,
                 "message": r.message,
                 "status": r.status,
                 "created_at": r.created_at.isoformat() if r.created_at else None,

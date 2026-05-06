@@ -4609,7 +4609,7 @@ function openInboxDetail(msgId) {
   const m = _inboxMessagesMap[String(msgId)];
   if (!m) return;
   _inboxDetailMsgId = msgId;
-  const safeBuyer = m.buyer_username || "ukjent";
+  const safeBuyer = m.sender_username || m.buyer_username || "ukjent";
   const safeTitle = m.item_title || `Annonse #${m.item_id || "?"}`;
   const atText = formatInboxTime(m.created_at);
   document.getElementById("inboxDetailSender").textContent = safeBuyer;
@@ -4741,9 +4741,10 @@ function renderInbox(messages, unreadCount) {
     listEl.innerHTML = messages.map((m) => {
       const isRead = (m.status || "").toLowerCase() === "read";
       const safeTitle = escapeInboxText(m.item_title || `Annonse #${m.item_id || "?"}`);
-      const safeBuyer = escapeInboxText(m.buyer_username || "ukjent");
+      const senderName = m.sender_username || m.buyer_username || "ukjent";
+      const safeBuyer = escapeInboxText(senderName);
       const atText = formatInboxTime(m.created_at);
-      const initial = (m.buyer_username || "?")[0].toUpperCase();
+      const initial = (senderName || "?")[0].toUpperCase();
       const msgPreview = escapeInboxText((m.message || "").replace(/\n/g, " ").slice(0, 80));
       return `
         <div class="inbox-card ${isRead ? "" : "unread"}" onclick="openInboxDetail(${m.id})">
@@ -4798,12 +4799,12 @@ async function fetchInbox(showErrors = false) {
 
     const newUnread = messages.filter((m) => {
       const isRead = (m.status || "").toLowerCase() === "read";
-      return !isRead && !inboxSeenIds.has(m.id);
+      return m.is_recipient && !isRead && !inboxSeenIds.has(m.id);
     });
 
     if (inboxInitialized && newUnread.length > 0) {
       const newest = newUnread[0];
-      notifyInstantMessage("Ny melding", `Du har fått melding fra ${newest.buyer_username || "en bruker"}`);
+      notifyInstantMessage("Ny melding", `Du har fått melding fra ${newest.sender_username || newest.buyer_username || "en bruker"}`);
     }
 
     messages.forEach((m) => inboxSeenIds.add(m.id));
