@@ -4733,30 +4733,36 @@ async function sendInboxReply(messageId) {
 
 function renderInbox(messages, unreadCount) {
   const token = localStorage.getItem("token");
-  const listEl = document.getElementById("inboxList");
-  const hintEl = document.getElementById("inboxHint");
-  const badgeEl = document.getElementById("inboxUnreadBadge");
+  const listEls = Array.from(document.querySelectorAll("#inboxList"));
+  const hintEls = Array.from(document.querySelectorAll("#inboxHint"));
+  const badgeEls = Array.from(document.querySelectorAll("#inboxUnreadBadge"));
   const headerBadge = document.getElementById("inboxHeaderBadge");
-  if (!listEl || !hintEl || !badgeEl) return;
+  if (!listEls.length || !hintEls.length || !badgeEls.length) return;
+
+  const setAll = (elements, updater) => elements.forEach((el) => updater(el));
 
   if (!token) {
-    hintEl.style.display = "block";
-    hintEl.textContent = "Logg inn for å se meldinger.";
-    listEl.innerHTML = "";
-    badgeEl.style.display = "none";
+    setAll(hintEls, (el) => {
+      el.style.display = "block";
+      el.textContent = "Logg inn for å se meldinger.";
+    });
+    setAll(listEls, (el) => { el.innerHTML = ""; });
+    setAll(badgeEls, (el) => { el.style.display = "none"; });
     if (headerBadge) headerBadge.style.display = "none";
     return;
   }
 
   if (!messages || messages.length === 0) {
-    hintEl.style.display = "block";
-    hintEl.textContent = "Ingen meldinger ennå.";
-    listEl.innerHTML = "";
+    setAll(hintEls, (el) => {
+      el.style.display = "block";
+      el.textContent = "Ingen meldinger ennå.";
+    });
+    setAll(listEls, (el) => { el.innerHTML = ""; });
   } else {
-    hintEl.style.display = "none";
+    setAll(hintEls, (el) => { el.style.display = "none"; });
     _inboxMessagesMap = {};
     messages.forEach((m) => { _inboxMessagesMap[String(m.id)] = m; });
-    listEl.innerHTML = messages.map((m) => {
+    const html = messages.map((m) => {
       const isRead = (m.status || "").toLowerCase() === "read";
       const safeTitle = escapeInboxText(m.item_title || `Annonse #${m.item_id || "?"}`);
       const senderName = m.sender_username || m.buyer_username || "ukjent";
@@ -4779,14 +4785,17 @@ function renderInbox(messages, unreadCount) {
         </div>
       `;
     }).join("");
+    setAll(listEls, (el) => { el.innerHTML = html; });
   }
 
   if (unreadCount > 0) {
-    badgeEl.style.display = "inline-flex";
-    badgeEl.textContent = String(unreadCount);
+    setAll(badgeEls, (el) => {
+      el.style.display = "inline-flex";
+      el.textContent = String(unreadCount);
+    });
     if (headerBadge) { headerBadge.style.display = "inline-flex"; headerBadge.textContent = String(unreadCount); }
   } else {
-    badgeEl.style.display = "none";
+    setAll(badgeEls, (el) => { el.style.display = "none"; });
     if (headerBadge) headerBadge.style.display = "none";
   }
 }
