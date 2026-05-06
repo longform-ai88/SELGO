@@ -3529,7 +3529,9 @@ function switchAuthTab(name, el) {
 
 async function fetchItems(){
 try {
-const res=await fetch(API+"/listings");
+const token = localStorage.getItem("token");
+const headers = token ? {"Authorization": "Bearer " + token} : {};
+const res=await fetch(API+"/listings", { headers });
 if (!res.ok) {
   return;
 }
@@ -3621,7 +3623,7 @@ function openItemDetail(itemId) {
   const addressHtml = item.address ? `<p style="font-size:13px;color:#476086;margin:4px 0">📍 ${item.address}</p>` : "";
   const phoneHtml = item.seller_phone ? `<p style="font-size:13px;color:#476086;margin:4px 0">📞 <a href="tel:${item.seller_phone}" style="color:#0d274f;font-weight:700">${item.seller_phone}</a></p>` : "";
   const loggedInUser = getLoggedInUsername();
-  const isOwner = loggedInUser && loggedInUser === item.seller_username;
+  const isOwner = Boolean(item.can_delete || (loggedInUser && loggedInUser === item.seller_username));
   const deleteBtn = isOwner ? `<button type="button" style="margin-top:14px;background:#c0392b;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700" onclick="deleteListing(${item.id})">Slett annonse</button>` : "";
 
   body.innerHTML = `

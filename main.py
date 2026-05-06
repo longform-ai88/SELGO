@@ -189,6 +189,8 @@ def _resolve_item_owner_username(db: Session, item_id: int, item: Optional[ItemD
     if owner and owner.username:
         return owner.username
 
+    resolved_username = None
+
     payment_owner = (
         db.query(PaymentOrderDB.buyer_username)
         .filter(PaymentOrderDB.item_id == item_id)
@@ -196,22 +198,45 @@ def _resolve_item_owner_username(db: Session, item_id: int, item: Optional[ItemD
         .first()
     )
     if payment_owner and payment_owner[0]:
-        return payment_owner[0]
+        resolved_username = payment_owner[0]
 
-    item = item or db.query(ItemDB).filter(ItemDB.id == item_id).first()
-    if item and item.seller_phone:
-        phone_candidates = _phone_candidates(item.seller_phone)
-        if phone_candidates:
-            phone_owner = (
-                db.query(UserDB.username)
-                .filter(UserDB.phone.in_(phone_candidates))
-                .order_by(UserDB.id.desc())
-                .first()
-            )
-            if phone_owner and phone_owner[0]:
-                return phone_owner[0]
+    if not resolved_username:
+        item = item or db.query(ItemDB).filter(ItemDB.id == item_id).first()
+        if item and item.seller_phone:
+            phone_candidates = _phone_candidates(item.seller_phone)
+            if phone_candidates:
+                phone_owner = (
+                    db.query(UserDB.username)
+                    .filter(UserDB.phone.in_(phone_candidates))
+                    .order_by(UserDB.id.desc())
+                    .first()
+                )
+                if phone_owner and phone_owner[0]:
+                    resolved_username = phone_owner[0]
+
+    if resolved_username:
+        try:
+            db.add(ListingOwnerDB(item_id=item_id, username=resolved_username))
+            db.commit()
+        except Exception:
+            db.rollback()
+        return resolved_username
 
     return None
+
+
+def _get_request_user(request: Request, db: Session) -> Optional[UserDB]:
+    auth_header = (request.headers.get("authorization") or "").strip()
+    if not auth_header.lower().startswith("bearer "):
+        return None
+    token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        return None
+    try:
+        data = jwt.decode(token, SECRET, algorithms=[ALGO])
+    except Exception:
+        return None
+    return db.query(UserDB).filter(UserDB.username == data.get("sub")).first()
 
 
 def normalize_payment_provider(provider: Optional[str]) -> str:
@@ -753,8 +778,9 @@ def vipps_callback(code: Optional[str] = None, state: Optional[str] = None, erro
 
 # === LISTINGS (MINIMAL SAFE) ===
 @app.get("/listings")
-def listings(db: Session = Depends(get_db)):
+def listings(request: Request, db: Session = Depends(get_db)):
     now = datetime.utcnow()
+    current_user = _get_request_user(request, db)
     items = (
         db.query(ItemDB)
         .filter((ItemDB.status == "active") | (ItemDB.status.is_(None)))
@@ -772,6 +798,7 @@ def listings(db: Session = Depends(get_db)):
         d["seller_name"] = seller_username
         d["seller_type"] = seller_user.seller_type if seller_user else "privat"
         d["seller_company_name"] = seller_user.company_name if seller_user else None
+        d["can_delete"] = bool(current_user and seller_username and current_user.username == seller_username)
         result.append(d)
     return result
 
@@ -986,11 +1013,8 @@ def confirm_payment_order(
     if not item:
         raise HTTPException(404, "Annonse ikke funnet")
 
-    owner = db.query(ListingOwnerDB).filter(
-        ListingOwnerDB.item_id == item.id,
-        ListingOwnerDB.username == user.username,
-    ).first()
-    if not owner:
+    owner_username = _resolve_item_owner_username(db, item.id, item)
+    if owner_username != user.username:
         raise HTTPException(403, "Du eier ikke denne annonsen")
 
     if order.provider == "vipps":
@@ -1062,11 +1086,8 @@ async def create_checkout_session(
     if not item:
         raise HTTPException(404, "Annonse ikke funnet")
 
-    owner = db.query(ListingOwnerDB).filter(
-        ListingOwnerDB.item_id == item_id,
-        ListingOwnerDB.username == user.username,
-    ).first()
-    if not owner:
+    owner_username = _resolve_item_owner_username(db, item_id, item)
+    if owner_username != user.username:
         raise HTTPException(403, "Du eier ikke denne annonsen")
 
     order = (
