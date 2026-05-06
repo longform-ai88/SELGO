@@ -4639,11 +4639,20 @@ async function sendInboxReplyFromDetail() {
   const form = new FormData();
   form.append("message", text);
   try {
-    const res = await fetch(API + `/messages/${_inboxDetailMsgId}/reply`, {
-      method: "POST",
-      headers: {"Authorization": "Bearer " + token},
-      body: form,
-    });
+    let res;
+    try {
+      res = await fetchWithAutoApi(`/messages/${_inboxDetailMsgId}/reply`, {
+        method: "POST",
+        headers: {"Authorization": "Bearer " + token},
+        body: form,
+      });
+    } catch (_) {
+      res = await fetch(API + `/messages/${_inboxDetailMsgId}/reply`, {
+        method: "POST",
+        headers: {"Authorization": "Bearer " + token},
+        body: form,
+      });
+    }
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) { showToast(payload.detail || "Kunne ikke sende svar", 3000); return; }
     setInboxReplyDraft(_inboxDetailMsgId, "");
@@ -4693,11 +4702,20 @@ async function sendInboxReply(messageId) {
   form.append("message", text);
 
   try {
-    const res = await fetch(API + `/messages/${messageId}/reply`, {
-      method: "POST",
-      headers: {"Authorization": "Bearer " + token},
-      body: form,
-    });
+    let res;
+    try {
+      res = await fetchWithAutoApi(`/messages/${messageId}/reply`, {
+        method: "POST",
+        headers: {"Authorization": "Bearer " + token},
+        body: form,
+      });
+    } catch (_) {
+      res = await fetch(API + `/messages/${messageId}/reply`, {
+        method: "POST",
+        headers: {"Authorization": "Bearer " + token},
+        body: form,
+      });
+    }
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
       showToast(payload.detail || "Kunne ikke sende svar", 3200);
@@ -4785,9 +4803,16 @@ async function fetchInbox(showErrors = false) {
   }
 
   try {
-    const res = await fetch(API + "/messages/inbox?limit=50", {
-      headers: {"Authorization": "Bearer " + token}
-    });
+    let res;
+    try {
+      res = await fetchWithAutoApi("/messages/inbox?limit=50", {
+        headers: {"Authorization": "Bearer " + token}
+      });
+    } catch (_) {
+      res = await fetch(API + "/messages/inbox?limit=50", {
+        headers: {"Authorization": "Bearer " + token}
+      });
+    }
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
       if (showErrors) showToast(payload.detail || "Kunne ikke hente inbox", 3500);
@@ -4820,10 +4845,18 @@ async function markInboxMessageRead(messageId) {
   if (!token) return;
 
   try {
-    const res = await fetch(API + `/messages/${messageId}/read`, {
-      method: "POST",
-      headers: {"Authorization": "Bearer " + token}
-    });
+    let res;
+    try {
+      res = await fetchWithAutoApi(`/messages/${messageId}/read`, {
+        method: "POST",
+        headers: {"Authorization": "Bearer " + token}
+      });
+    } catch (_) {
+      res = await fetch(API + `/messages/${messageId}/read`, {
+        method: "POST",
+        headers: {"Authorization": "Bearer " + token}
+      });
+    }
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
       showToast(payload.detail || "Kunne ikke oppdatere melding", 3200);
@@ -5162,14 +5195,28 @@ const form = new FormData();
 form.append("item_id", itemId);
 form.append("message", text.trim());
 
-const res = await fetch(API + "/contact-seller", {
-method: "POST",
-headers: {"Authorization": "Bearer " + token},
-body: form
-});
+let res;
+try {
+  try {
+    res = await fetchWithAutoApi("/contact-seller", {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + token},
+      body: form
+    });
+  } catch (_) {
+    res = await fetch(API + "/contact-seller", {
+      method: "POST",
+      headers: {"Authorization": "Bearer " + token},
+      body: form
+    });
+  }
+} catch (_) {
+  alert("Nettverksfeil. Kunne ikke sende melding.");
+  return;
+}
 
 if (!res.ok) {
-const err = await res.json();
+const err = await res.json().catch(()=>({}));
 alert(err.detail || "Kunne ikke sende melding");
 return;
 }

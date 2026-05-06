@@ -1280,7 +1280,11 @@ def reply_to_inbox_message(
     original = db.query(ContactMessageDB).filter(ContactMessageDB.id == message_id).first()
     if not original:
         raise HTTPException(404, "Melding ikke funnet")
-    if original.seller_username != user.username:
+    if user.username == original.seller_username:
+        recipient_username = original.buyer_username
+    elif user.username == original.buyer_username:
+        recipient_username = original.seller_username
+    else:
         raise HTTPException(403, "Ingen tilgang til denne meldingen")
 
     clean_message = (message or "").strip()
@@ -1290,7 +1294,7 @@ def reply_to_inbox_message(
     reply = ContactMessageDB(
         item_id=original.item_id,
         buyer_username=user.username,
-        seller_username=original.buyer_username,
+        seller_username=recipient_username,
         message=clean_message,
         status="sent",
         created_at=datetime.utcnow(),
