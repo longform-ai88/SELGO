@@ -2516,6 +2516,10 @@ width: 146px;
 
 <div class="auth-pane" id="pane-register">
   <div class="field">
+    <label for="registerDisplayName">Visningsnavn</label>
+    <input id="registerDisplayName" placeholder="Navnet som skal vises i appen" autocomplete="nickname">
+  </div>
+  <div class="field">
     <label for="registerFirstName">Fornavn</label>
     <input id="registerFirstName" placeholder="Fornavn" autocomplete="given-name">
   </div>
@@ -3721,10 +3725,10 @@ function renderProfileModalBody() {
   const isLogin = profileModalMode === "login";
   title.textContent = isLogin ? "Logg inn" : "Registrer";
   body.innerHTML = `
-    <p class="profile-info">${isLogin ? "Logg inn med brukernavn og passord." : "Opprett ny bruker med brukernavn, e-post, mobilnummer og passord."}</p>
+    <p class="profile-info">${isLogin ? "Logg inn med e-post eller mobilnummer og passord." : "Opprett ny bruker med visningsnavn, navn, e-post, mobilnummer og passord."}</p>
     <div class="profile-form">
       ${isLogin ? "" : '<input id="profileFullNameInput" placeholder="Fullt navn (valgfritt)">'}
-      <input id="profileUsernameInput" placeholder="Brukernavn">
+      <input id="profileUsernameInput" placeholder="${isLogin ? "E-post eller mobilnummer" : "Visningsnavn"}">
       ${isLogin ? "" : '<input id="profileEmailInput" type="email" placeholder="E-postadresse">'}
       ${isLogin ? "" : '<input id="profilePhoneInput" type="tel" placeholder="Mobilnummer">'}
       <input id="profilePasswordInput" type="password" placeholder="Passord">
@@ -3738,15 +3742,16 @@ function renderProfileModalBody() {
 }
 
 async function loginFromProfileModal() {
-  const username = (document.getElementById("profileUsernameInput")?.value || "").trim();
+  const identifier = (document.getElementById("profileUsernameInput")?.value || "").trim();
   const password = document.getElementById("profilePasswordInput")?.value || "";
-  if (!username || !password) {
-    setProfileModalMessage("Fyll inn brukernavn og passord", true);
+  if (!identifier || !password) {
+    setProfileModalMessage("Fyll inn e-post eller mobilnummer og passord", true);
     return;
   }
 
   const form = new FormData();
-  form.append("username", username);
+  form.append("email", identifier);
+  form.append("phone", identifier);
   form.append("password", password);
 
   try {
@@ -3774,7 +3779,7 @@ async function registerFromProfileModal() {
   const phone = (document.getElementById("profilePhoneInput")?.value || "").trim().replace(/\s/g, "");
   const password = document.getElementById("profilePasswordInput")?.value || "";
   if (!username || !password || !email || !phone) {
-    setProfileModalMessage("Fyll inn brukernavn, e-post, mobilnummer og passord", true);
+    setProfileModalMessage("Fyll inn visningsnavn, e-post, mobilnummer og passord", true);
     return;
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -3982,7 +3987,7 @@ async function loginDedicated() {
   const password = document.getElementById("loginPassword")?.value || "";
   
   if (!identifier || !password) {
-    if (msgEl) { msgEl.style.display = "block"; msgEl.textContent = "Fyll inn brukernavn/mobilnummer og passord"; }
+    if (msgEl) { msgEl.style.display = "block"; msgEl.textContent = "Fyll inn e-post/mobilnummer og passord"; }
     return;
   }
 
@@ -3991,12 +3996,8 @@ async function loginDedicated() {
 
   try {
     const form = new FormData();
-    // Try username first, if it looks like a phone number, use phone
-    if (/^\d+$/.test(identifier)) {
-      form.append("phone", identifier);
-    } else {
-      form.append("username", identifier);
-    }
+    form.append("phone", identifier);
+    form.append("email", identifier);
     form.append("password", password);
 
     let res;
@@ -4035,6 +4036,7 @@ async function register(){
   if (registerBtn) { registerBtn.disabled = true; registerBtn.textContent = "Laster..."; }
   try {
   const form = new FormData();
+  const displayName = (document.getElementById("registerDisplayName")?.value || "").trim();
   const firstName = (document.getElementById("registerFirstName")?.value || "").trim();
   const lastName = (document.getElementById("registerLastName")?.value || "").trim();
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
@@ -4042,18 +4044,19 @@ async function register(){
   const ph = (document.getElementById("registerPhone")?.value || "").trim().replace(/\s/g,"");
   const pw = (document.getElementById("registerPassword")?.value || "");
 
-  if (!firstName || !lastName || !em || !ph || !pw) {
+  if (!displayName || !firstName || !lastName || !em || !ph || !pw) {
     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
-    showAuthMsg("Fyll inn fornavn, etternavn, epostadresse, mobilnummer og passord", true);
+    showAuthMsg("Fyll inn visningsnavn, fornavn, etternavn, epostadresse, mobilnummer og passord", true);
     return;
   }
 
+  form.append("username", displayName);
   form.append("email", em);
   form.append("phone", ph);
   form.append("password", pw);
   if (fullName) form.append("full_name", fullName);
 
-  _pendingVerifyUsername = ph;
+  _pendingVerifyUsername = displayName;
   _pendingVerifyEmail = em;
 
   let res;
@@ -4092,8 +4095,7 @@ async function register(){
     setTimeout(() => location.reload(), 400);
     return;
   }
-  // Backward compatibility if API still requires OTP.
-  showVerifyEmailPane();
+  showAuthMsg("Konto opprettet. Logg inn med e-post eller mobilnummer.", false);
   } catch (e) {
     if (registerBtn) { registerBtn.disabled = false; registerBtn.textContent = origText; }
     showAuthMsg("Nettverksfeil. Sjekk internett og prøv igjen.", true);

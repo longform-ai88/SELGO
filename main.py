@@ -420,6 +420,12 @@ def register(
     invite_code: str = Form(None),
     db: Session = Depends(get_db)
 ):
+    display_name = (username or "").strip()
+    if display_name.lower() in {"undefined", "null", "none"}:
+        display_name = ""
+    if not display_name:
+        raise HTTPException(400, "Visningsnavn er påkrevd")
+
     # Require phone
     phone_clean = (phone or "").strip().replace(" ", "")
     phone_digits = re.sub(r"\D", "", phone_clean)
@@ -438,18 +444,8 @@ def register(
     if not _is_valid_email(email_clean):
         raise HTTPException(400, "Ugyldig e-postadresse")
 
-    # Require username or fall back to phone
-    if not username and not phone_clean:
-        raise HTTPException(400, "Brukernavn eller mobilnummer er påkrevd")
-
-    username_clean = (username or "").strip()
-    if username_clean.lower() in {"undefined", "null", "none"}:
-        username_clean = ""
-    username_provided = bool(username_clean)
-    effective_username = username_clean or phone_clean
-
     print(
-        f"[REGISTER] attempt username='{effective_username}' phone='{phone_clean}' email='{email_clean}'"
+        f"[REGISTER] attempt username='{display_name}' phone='{phone_clean}' email='{email_clean}'"
     )
 
     # Check for existing phone
@@ -463,24 +459,21 @@ def register(
         raise HTTPException(400, "E-postadressen er allerede registrert")
 
     # Check for existing username after phone/email checks.
-    if db.query(UserDB).filter(UserDB.username == effective_username).first():
-        print(f"[REGISTER] duplicate username='{effective_username}'")
-        if username_provided:
-            raise HTTPException(400, "Bruker finnes allerede")
-        raise HTTPException(400, "Mobilnummer er allerede registrert")
+    if db.query(UserDB).filter(UserDB.username == display_name).first():
+        print(f"[REGISTER] duplicate username='{display_name}'")
+        raise HTTPException(400, "Visningsnavn er allerede i bruk")
 
     is_free = bool(INVITE_CODE and invite_code and invite_code.strip() == INVITE_CODE)
-    otp = _generate_otp()
 
     user = UserDB(
-        username=effective_username,
+        username=display_name,
         password=pwd.hash(password),
         full_name=full_name.strip() if full_name else None,
         phone=phone_clean,
         email=email_clean,
-        email_verified=0,
-        email_token=otp,
-        is_verified=0,
+        email_verified=1,
+        email_token=None,
+        is_verified=1,
         is_free=int(is_free),
     )
     try:
@@ -490,7 +483,7 @@ def register(
     except IntegrityError as exc:
         db.rollback()
         print(
-            f"[REGISTER] integrity error username='{effective_username}' phone='{phone_clean}' email='{email_clean}'"
+            f"[REGISTER] integrity error username='{display_name}' phone='{phone_clean}' email='{email_clean}'"
         )
         msg = str(getattr(exc, "orig", exc)).lower()
         if "email" in msg:
@@ -498,22 +491,19 @@ def register(
         if "phone" in msg:
             raise HTTPException(400, "Mobilnummer er allerede registrert")
         if "username" in msg or "users_username_key" in msg:
-            if username_provided:
-                raise HTTPException(400, "Bruker finnes allerede")
-            raise HTTPException(400, "Mobilnummer er allerede registrert")
+            raise HTTPException(400, "Visningsnavn er allerede i bruk")
         raise HTTPException(400, "Bruker finnes allerede")
     except Exception as exc:
         db.rollback()
         print(f"[REGISTER] unexpected error: {type(exc).__name__}: {exc}")
         raise
 
-    _send_verification_email(email_clean, otp)
-    print(f"[REGISTER] created user_id={user.id} username='{user.username}' otp_sent=1")
+    print(f"[REGISTER] created user_id={user.id} username='{user.username}' verified=1")
     return {
         "msg": "ok",
+        "access_token": create_token(user.username),
         "is_free": is_free,
-        "requires_email_verification": True,
-        "sent_to": _mask_email(email_clean),
+        "display_name": user.username,
     }
 
 
@@ -582,7 +572,7 @@ def login(
     invite_code: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    identifier = (username or phone or email or "").strip()
+    identifier = (email or phone or username or "").strip()
     if not identifier:
         raise HTTPException(400, "Mobilnummer eller e-post er påkrevd")
 
@@ -600,9 +590,7 @@ def login(
     )
 
     matched_users = db.query(UserDB).filter(
-        (UserDB.username == identifier) |
         (UserDB.phone.in_(list(phone_candidates))) |
-        (UserDB.email == identifier) |
         (UserDB.email == identifier_email)
     ).order_by(UserDB.id.desc()).all()
 
@@ -746,7 +734,7 @@ def listings(db: Session = Depends(get_db)):
         seller_user = db.query(UserDB).filter(UserDB.username == seller_username).first() if seller_username else None
         d = {c.name: getattr(item, c.name) for c in item.__table__.columns}
         d["seller_username"] = seller_username
-        d["seller_name"] = seller_user.full_name if seller_user and seller_user.full_name else seller_username
+        d["seller_name"] = seller_username
         d["seller_type"] = seller_user.seller_type if seller_user else "privat"
         d["seller_company_name"] = seller_user.company_name if seller_user else None
         result.append(d)
