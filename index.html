@@ -4109,13 +4109,6 @@ async function register(){
   }
 }
 
-function switchAuthTab(mode) {
-  document.querySelectorAll(".auth-pane").forEach(p => p.classList.remove("active"));
-  const paneId = mode === "register" ? "pane-register" : "pane-login";
-  const pane = document.getElementById(paneId);
-  if (pane) pane.classList.add("active");
-}
-
 function showVerifyEmailPane() {
   // Hide all panes, show the verify pane
   document.querySelectorAll(".auth-pane").forEach(p => { p.classList.remove("active"); p.style.display = ""; });
@@ -5218,8 +5211,9 @@ return;
 
 const form = new FormData();
 form.append("item_id", itemId);
+form.append("amount", "0");
 
-const res = await fetch(API + "/payments/stripe/create-checkout-session", {
+const res = await fetch(API + "/create-checkout-session", {
 method: "POST",
 headers: {"Authorization": "Bearer " + token},
 body: form
