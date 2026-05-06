@@ -850,6 +850,7 @@ async def create_listing(
         price=price,
         location=city,
         category=category,
+        seller_username=user.username,
         image_url=image_url,
         listing_type=listing_type,
         boost_selected=boost_flag,
@@ -1180,9 +1181,32 @@ def contact_seller(
     if not buyer:
         raise HTTPException(401, "Ikke innlogget")
 
-    seller_username = _resolve_item_owner_username(db, item_id)
+    item = db.query(ItemDB).filter(ItemDB.id == item_id).first()
+    if not item:
+        raise HTTPException(404, "Annonse ikke funnet")
+
+    seller_username = _resolve_item_owner_username(db, item_id, item)
+    if not seller_username and item.seller_username:
+        seller_username = item.seller_username
+
+    # Fallback: if resolved owner equals sender, try an explicit non-self owner row.
+    if seller_username == buyer.username:
+        alt_owner = (
+            db.query(ListingOwnerDB.username)
+            .filter(
+                ListingOwnerDB.item_id == item_id,
+                ListingOwnerDB.username != buyer.username,
+            )
+            .order_by(ListingOwnerDB.id.asc())
+            .first()
+        )
+        if alt_owner and alt_owner[0]:
+            seller_username = alt_owner[0]
+
     if not seller_username:
         raise HTTPException(404, "Selger ikke funnet for annonsen")
+    if seller_username == buyer.username:
+        raise HTTPException(400, "Du kan ikke sende melding til din egen annonse")
 
     msg = ContactMessageDB(
         item_id=item_id,
