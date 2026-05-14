@@ -2837,7 +2837,19 @@ async function ensureWorkingApiBase() {
 }
 
 async function fetchWithAutoApi(path, options = {}) {
-  const run = async (base) => fetch(base + path, options);
+  const timeoutMs = Number(options.timeoutMs || 15000);
+  const fetchOptions = {...options};
+  delete fetchOptions.timeoutMs;
+
+  const run = async (base) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(base + path, {...fetchOptions, signal: controller.signal});
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
 
   let firstResponse = null;
   let firstError = null;
@@ -3540,24 +3552,22 @@ async function createListingWithProvider(providerOverride = null){
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       if (attempt > 1) {
-        showPublishStatus(`Server starter opp, vennligst vent… (forsøk ${attempt}/${MAX_ATTEMPTS})`, false);
-        await new Promise(r => setTimeout(r, 6000));
+        showPublishStatus(`Prøver ny backend-adresse… (forsøk ${attempt}/${MAX_ATTEMPTS})`, false);
+        await new Promise(r => setTimeout(r, 2500));
       }
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 55000);
-      res = await fetch(API + "/listings", {
+      res = await fetchWithAutoApi("/listings", {
         method: "POST",
         headers: {"Authorization":"Bearer " + token},
         body: form,
-        signal: controller.signal
+        timeoutMs: 55000
       });
-      clearTimeout(tid);
       data = await res.json().catch(()=>({}));
-      break;
+      if (res.ok) break;
+      if (attempt < MAX_ATTEMPTS) continue;
     } catch (err) {
       console.error(`[createListing feil forsøk ${attempt}]`, err, err?.message);
       if (attempt >= MAX_ATTEMPTS) {
-        const msg = "Kunne ikke nå serveren. Serveren kan være i ferd med å starte opp – prøv igjen om 30 sekunder.";
+        const msg = "Kunne ikke nå Selga-serveren. Sjekk API-base eller prøv igjen om litt.";
         showPublishStatus(msg, true);
         return { ok: false, data: { detail: msg } };
       }
@@ -4966,8 +4976,17 @@ async function handlePayment(method) {
   }
 
   // Wake up Render server before heavy payment request
-  showPublishStatus("Kobler til server…", false);
-  try { await fetch(API + "/ping", { method: "GET", cache: "no-store" }); } catch (_) {}
+  showPublishStatus("Sjekker Selga-server…", false);
+  try {
+    const pingRes = await fetchWithAutoApi("/ping", { method: "GET", cache: "no-store", timeoutMs: 12000 });
+    if (!pingRes.ok) {
+      showPublishStatus("Selga-serveren svarer ikke akkurat nå.", true);
+      return;
+    }
+  } catch (_) {
+    showPublishStatus("Selga-serveren svarer ikke akkurat nå.", true);
+    return;
+  }
 
   if (fee <= 0) {
     await addItem();
