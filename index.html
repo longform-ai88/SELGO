@@ -3493,18 +3493,32 @@ async function createListingWithProvider(providerOverride = null){
   }
 
   let res, data;
-  try {
-    res = await fetch(API + "/listings", {
-      method: "POST",
-      headers: {"Authorization":"Bearer " + token},
-      body: form
-    });
-    data = await res.json().catch(()=>({}));
-  } catch (err) {
-    console.error("[createListing feil]", err, err?.message);
-    const msg = `Kunne ikke nå serveren: ${err?.message || err}. Sjekk internett og prøv igjen.`;
-    showPublishStatus(msg, true);
-    return { ok: false, data: { detail: msg } };
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      if (attempt > 1) {
+        showPublishStatus(`Server starter opp, vennligst vent… (forsøk ${attempt}/${MAX_ATTEMPTS})`, false);
+        await new Promise(r => setTimeout(r, 6000));
+      }
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 55000);
+      res = await fetch(API + "/listings", {
+        method: "POST",
+        headers: {"Authorization":"Bearer " + token},
+        body: form,
+        signal: controller.signal
+      });
+      clearTimeout(tid);
+      data = await res.json().catch(()=>({}));
+      break;
+    } catch (err) {
+      console.error(`[createListing feil forsøk ${attempt}]`, err, err?.message);
+      if (attempt >= MAX_ATTEMPTS) {
+        const msg = "Kunne ikke nå serveren. Serveren kan være i ferd med å starte opp – prøv igjen om 30 sekunder.";
+        showPublishStatus(msg, true);
+        return { ok: false, data: { detail: msg } };
+      }
+    }
   }
   if (!res.ok) {
     console.error("[createListing HTTP error]", res.status, data);
@@ -4907,6 +4921,11 @@ async function handlePayment(method) {
   if (fee > 0) {
     trackBeginCheckout(fee, document.getElementById("category")?.value);
   }
+
+  // Wake up Render server before heavy payment request
+  showPublishStatus("Kobler til server…", false);
+  try { await fetch(API + "/ping", { method: "GET", cache: "no-store" }); } catch (_) {}
+
   if (fee <= 0) {
     await addItem();
     return;
