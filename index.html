@@ -237,7 +237,7 @@ transition: none;
 }
 
 .post-shortcut:hover {
-transform: none;
+transform: translateX(-50%);
 box-shadow: 0 12px 24px rgba(0, 0, 0, 0.55), 0 0 20px rgba(240, 198, 106, 0.36), inset 0 1px 0 rgba(255, 240, 202, 0.66);
 }
 
@@ -2442,16 +2442,6 @@ width: 146px;
 <div class="page-layout">
 
 <div class="container">
-
-<div class="ai-assistant collapsed">
-<div class="assistant-top">
-<h3>SELGA Assistent</h3>
-<button id="assistantToggle" class="assistant-toggle" onclick="toggleAssistant()">Vis</button>
-</div>
-<div class="ai-output" id="aiOutput"><div class="ai-msg bot"><span>Hva kan jeg hjelpe deg med?</span></div></div>
-<input id="aiPrompt" placeholder="Skriv her..." onkeydown="if(event.key==='Enter')runHighLogicAssistant()">
-<button onclick="runHighLogicAssistant()" id="aiRunBtn">Send</button>
-</div>
 
 <div class="main-title">
   <div class="logo-wrap">
@@ -4947,13 +4937,18 @@ async function handlePayment(method) {
       const vippsForm = new FormData();
       vippsForm.append("order_id", String(data.payment_order_id));
 
-      const vippsRes = await fetch(API + "/vipps/create-order", {
-        method: "POST",
-        headers: {"Authorization": "Bearer " + token},
-        body: vippsForm
-      });
-
-      const vippsData = await vippsRes.json().catch(()=>({}));
+      let vippsRes, vippsData;
+      try {
+        vippsRes = await fetchWithAutoApi("/vipps/create-order", {
+          method: "POST",
+          headers: {"Authorization": "Bearer " + token},
+          body: vippsForm
+        });
+        vippsData = await vippsRes.json().catch(()=>({}));
+      } catch (fetchErr) {
+        showPaymentResult("error", "Nettverksfeil – kunne ikke nå betalingsserveren. Prøv igjen.");
+        return;
+      }
       if (!vippsRes.ok || !vippsData.checkout_url) {
         showPaymentResult("error", vippsData.detail || "Kunne ikke starte Vipps-betaling.");
         return;
@@ -5001,7 +4996,7 @@ async function handlePayment(method) {
 
   let stripeRes, stripeData;
   try {
-    stripeRes = await fetch(API + "/create-checkout-session", {
+    stripeRes = await fetchWithAutoApi("/create-checkout-session", {
       method: "POST",
       headers: {"Authorization": "Bearer " + token},
       body: form
@@ -5009,7 +5004,7 @@ async function handlePayment(method) {
     stripeData = await stripeRes.json().catch(()=>({}));
   } catch (err) {
     console.error("[Stripe betaling feil]", err);
-    showPublishStatus("Nettverksfeil – kunne ikke nå serveren. Prøv igjen.", true);
+    showPublishStatus("Nettverksfeil – kunne ikke nå betalingsserveren. Prøv igjen om noen sekunder.", true);
     return;
   }
   if (!stripeRes.ok || !stripeData.checkout_url) {
