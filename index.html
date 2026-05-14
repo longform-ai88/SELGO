@@ -2593,12 +2593,22 @@ width: 146px;
 </div>
 <div class="hint" id="formHint">Velg kategori over for automatisk utfylling av skjema.</div>
 <div class="pricing-preview" id="pricingPreview">Prisoversikt: -</div>
+<label for="paymentPlan" style="display:block;margin-top:10px;font-size:13px;color:rgba(240,220,160,0.88)">Velg Selga-pris</label>
+<select id="paymentPlan" class="full">
+  <option value="auto">Auto-pris (anbefalt)</option>
+  <option value="0">Gratis – 0 kr</option>
+  <option value="199">199 kr – standard annonse</option>
+  <option value="299">299 kr – stor annonse</option>
+  <option value="499">499 kr – bil</option>
+  <option value="799">799 kr – bolig til leie</option>
+  <option value="1499">1499 kr – bolig til salgs</option>
+</select>
 <button onclick="addItem()" id="addBtn"></button>
 <button type="button" id="payBtn" class="vipps-secondary" style="display:none" onclick="handlePayment(document.getElementById('paymentProvider').value)">Gå til betaling</button>
 <div id="vippsManualBox" class="vipps-manual" style="display:none">
   <div style="text-align:center;padding:16px 10px">
     <div style="font-size:14px;color:#555;margin-bottom:4px">Vipps til nummer</div>
-    <div style="font-size:48px;font-weight:900;color:#FF5B24;letter-spacing:4px" id="vippsNumberDisplay">40315139</div>
+    <div style="font-size:48px;font-weight:900;color:#FF5B24;letter-spacing:4px" id="vippsNumberDisplay">49939</div>
     <div style="font-size:13px;color:#777;margin:6px 0 14px">Beløp: <strong id="vippsAmountDisplay">–</strong></div>
     <a id="vippsDeepLink" href="https://vipps.no" target="_blank" rel="noopener" class="vipps-btn" style="display:inline-flex;text-decoration:none">
       <span class="vipps-logo">Vipps</span>
@@ -2675,6 +2685,16 @@ width: 146px;
 
     <div class="flow-panel" data-step="4">
       <label for="flowPaymentProvider">Steg 4: Betaling</label>
+      <label for="flowPaymentPlan" style="display:block;margin:8px 0 6px;font-size:13px;color:rgba(240,220,160,0.88)">Velg Selga-pris</label>
+      <select id="flowPaymentPlan" class="full" style="margin-bottom:10px">
+        <option value="auto">Auto-pris (anbefalt)</option>
+        <option value="0">Gratis – 0 kr</option>
+        <option value="199">199 kr – standard annonse</option>
+        <option value="299">299 kr – stor annonse</option>
+        <option value="499">499 kr – bil</option>
+        <option value="799">799 kr – bolig til leie</option>
+        <option value="1499">1499 kr – bolig til salgs</option>
+      </select>
       <select id="flowPaymentProvider" style="display:none">
         <option value="vipps" hidden disabled>Vipps</option>
         <option value="stripe" selected>Stripe</option>
@@ -3036,34 +3056,23 @@ function closeLegalModal(event){
   if (modal) modal.style.display = "none";
 }
 
-function calculatePricingPreview(categoryValue, priceValue, listingModeValue){
-  const categoryText = (categoryValue || "").toLowerCase();
-  const listingMode = (listingModeValue || "").toLowerCase();
-  const priceNum = Number(priceValue || 0);
+function calculatePricingPreview(categoryValue, priceValue, listingModeValue, sourceId = null){
+  const autoAmount = getAutoListingFee(categoryValue, priceValue, listingModeValue);
+  const selectedAmount = getSelectedSelgaFee(categoryValue, priceValue, listingModeValue, sourceId);
+  const selectedLabel = getSelgaFeeLabel(selectedAmount);
+  const autoLabel = getSelgaFeeLabel(autoAmount);
 
-  if (categoryText.startsWith("bil")) {
-    return "499 kr for 60 dager";
+  if (selectedAmount === autoAmount) {
+    return `${selectedLabel}`;
   }
 
-  if (categoryText.startsWith("bolig")) {
-    if (listingMode === "sale") return "1499 kr for 120 dager";
-    if (listingMode === "rent") return "799 kr for 60 dager";
-    return "Velg boligtype (salg eller leie) for riktig pris";
-  }
-
-  if (!Number.isFinite(priceNum) || priceNum <= 0) {
-    return "Skriv inn pris for å se kostnad";
-  }
-  if (priceNum < 2000) return "Gratis";
-  if (priceNum <= 9999) return "199 kr for 60 dager";
-  if (priceNum <= 20000) return "299 kr for 60 dager";
-  return "299 kr for 60 dager";
+  return `Valgt pris: ${selectedLabel} | Auto-pris: ${autoLabel}`;
 }
 
-function calculatePrice(price, category) {
+function getAutoListingFee(category, price, listingMode) {
   const amount = Number(price || 0);
   const categoryText = (category || "").toLowerCase();
-  const listingMode = (document.getElementById("listingMode")?.value || "").toLowerCase();
+  const mode = (listingMode || "").toLowerCase();
 
   // Gratis for alle kategorier opp til og med 1999 kr
   if (!Number.isFinite(amount) || amount < 2000) return 0;
@@ -3071,13 +3080,42 @@ function calculatePrice(price, category) {
   if (categoryText.startsWith("bil")) return 499;
 
   if (categoryText.startsWith("bolig")) {
-    if (listingMode === "rent") return 799;
+    if (mode === "rent") return 799;
     return 1499;
   }
 
   if (amount <= 9999) return 199;
   if (amount <= 20000) return 299;
   return 299;
+}
+
+function getSelgaFeeLabel(amount) {
+  const normalized = Number(amount || 0);
+  if (!Number.isFinite(normalized) || normalized <= 0) return "Gratis";
+  if (normalized === 199) return "199 kr for 60 dager";
+  if (normalized === 299) return "299 kr for 60 dager";
+  if (normalized === 499) return "499 kr for 60 dager";
+  if (normalized === 799) return "799 kr for 60 dager";
+  if (normalized === 1499) return "1499 kr for 120 dager";
+  return `${normalized} kr`;
+}
+
+function getSelectedSelgaFee(category, price, listingMode, sourceId = null) {
+  const planValue = (sourceId
+    ? document.getElementById(sourceId)?.value
+    : document.getElementById("paymentPlan")?.value || document.getElementById("flowPaymentPlan")?.value) || "auto";
+  if (planValue && planValue !== "auto") {
+    const manualAmount = Number(planValue);
+    if (Number.isFinite(manualAmount) && manualAmount >= 0) {
+      return manualAmount;
+    }
+  }
+  return getAutoListingFee(category, price, listingMode);
+}
+
+function calculatePrice(price, category) {
+  const listingMode = (document.getElementById("listingMode")?.value || "").toLowerCase();
+  return getSelectedSelgaFee(category, price, listingMode, "paymentPlan");
 }
 
 function updatePaymentActionButtons() {
@@ -3087,13 +3125,14 @@ function updatePaymentActionButtons() {
   const categoryEl = document.getElementById("category");
   const providerEl = document.getElementById("paymentProvider");
   const vippsManualBox = document.getElementById("vippsManualBox");
+  const planEl = document.getElementById("paymentPlan");
 
-  if (!addBtn || !payBtn || !priceEl || !categoryEl || !providerEl) return;
+  if (!addBtn || !payBtn || !priceEl || !categoryEl || !providerEl || !planEl) return;
 
   const fee = calculatePrice(priceEl.value, categoryEl.value);
   const method = providerEl.value || "stripe";
   payBtn.setAttribute("onclick", "handlePayment()");
-  payBtn.textContent = method === "vipps" ? "Betal med Vipps" : "Betal med Stripe";
+  payBtn.textContent = `${method === "vipps" ? "Betal med Vipps" : "Betal med Stripe"} (${getSelgaFeeLabel(fee)})`;
 
   if (fee > 0) {
     addBtn.style.display = "none";
@@ -3112,7 +3151,8 @@ function renderPricingPreview(){
   const value = calculatePricingPreview(
     document.getElementById("category").value,
     document.getElementById("price").value,
-    document.getElementById("listingMode").value
+    document.getElementById("listingMode").value,
+    "paymentPlan"
   );
   el.innerText = `Prisoversikt: ${value}`;
   updatePaymentActionButtons();
@@ -3124,7 +3164,8 @@ function renderFlowPricingPreview(){
   const value = calculatePricingPreview(
     document.getElementById("flowCategory").value,
     document.getElementById("flowPrice").value,
-    document.getElementById("flowListingMode").value
+    document.getElementById("flowListingMode").value,
+    "flowPaymentPlan"
   );
   el.innerText = `Prisoversikt: ${value}`;
 }
@@ -3184,6 +3225,7 @@ async function goToPaymentFromFlow(){
   document.getElementById("desc").value = document.getElementById("flowDesc").value;
   document.getElementById("price").value = document.getElementById("flowPrice").value;
   document.getElementById("boostToggle").checked = document.getElementById("flowBoost").checked;
+  document.getElementById("paymentPlan").value = document.getElementById("flowPaymentPlan").value || "auto";
   const selectedProvider = document.getElementById("flowPaymentProvider").value || "stripe";
   document.getElementById("paymentProvider").value = selectedProvider;
   renderPricingPreview();
@@ -3454,6 +3496,7 @@ async function createListingWithProvider(providerOverride = null){
   form.append("listing_mode", modeValue);
   form.append("boost", document.getElementById("boostToggle").checked ? "true" : "false");
   form.append("payment_provider", providerOverride || document.getElementById("paymentProvider").value);
+  form.append("selected_fee_nok", String(getSelectedSelgaFee(selectedCategory, document.getElementById("price").value, modeValue, "paymentPlan")));
 
   const imageInput = document.getElementById("image");
   const flowImageInput = document.getElementById("flowImages");
@@ -5378,13 +5421,17 @@ if (priceEl) priceEl.addEventListener("input", renderPricingPreview);
 if (categoryEl) categoryEl.addEventListener("change", () => { updateSubcategoryOptions(); renderPricingPreview(); });
 if (modeEl) modeEl.addEventListener("change", renderPricingPreview);
 if (providerEl) providerEl.addEventListener("change", renderPricingPreview);
+const planEl = document.getElementById("paymentPlan");
+if (planEl) planEl.addEventListener("change", renderPricingPreview);
 
 const flowPriceEl = document.getElementById("flowPrice");
 const flowCategoryEl = document.getElementById("flowCategory");
 const flowModeEl = document.getElementById("flowListingMode");
+const flowPlanEl = document.getElementById("flowPaymentPlan");
 if (flowPriceEl) flowPriceEl.addEventListener("input", renderFlowPricingPreview);
 if (flowCategoryEl) flowCategoryEl.addEventListener("change", () => { updateFlowSubcategoryOptions(); renderFlowPricingPreview(); });
 if (flowModeEl) flowModeEl.addEventListener("change", renderFlowPricingPreview);
+if (flowPlanEl) flowPlanEl.addEventListener("change", renderFlowPricingPreview);
 
 updateSubcategoryOptions();
 updateFlowSubcategoryOptions();

@@ -257,6 +257,9 @@ def calculate_listing_fee_nok(price: float, category: Optional[str], listing_mod
     return 299.0
 
 
+ALLOWED_LISTING_FEES = {0.0, 199.0, 299.0, 499.0, 799.0, 1499.0}
+
+
 def _vipps_cleanup_old_states():
     now = int(time.time())
     stale = [k for k, v in VIPPS_LOGIN_STATES.items() if now - int(v.get("created_at", 0)) > VIPPS_STATE_TTL_SECONDS]
@@ -805,6 +808,7 @@ async def create_listing(
     listing_mode: str = Form(None),
     boost: str = Form("false"),
     payment_provider: str = Form(None),
+    selected_fee_nok: float = Form(None),
     address: str = Form(None),
     seller_phone: str = Form(None),
     image: UploadFile = File(None),
@@ -836,6 +840,13 @@ async def create_listing(
     boost_flag = boost.lower() == "true"
     payment_provider_value = normalize_payment_provider(payment_provider)
     fee_nok = calculate_listing_fee_nok(price, category, listing_mode, bool(user.is_free))
+    if selected_fee_nok is not None:
+        try:
+            selected_fee_value = float(selected_fee_nok)
+            if selected_fee_value in ALLOWED_LISTING_FEES:
+                fee_nok = selected_fee_value
+        except Exception:
+            pass
     payment_required = fee_nok > 0
 
     listing_type = listing_mode if listing_mode else "standard"
